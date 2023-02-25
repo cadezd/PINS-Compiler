@@ -59,8 +59,8 @@ public class Lexer {
      * @return seznam leksikalnih simbolov.
      */
     public List<Symbol> scan() {
+        // IMPLEMENTACIJA LEKSIKALNE ANALIZE
         var symbols = new ArrayList<Symbol>();
-        // todo: implementacija leksikalne analize
 
         int state = 0;
         Symbol symbol;
@@ -70,7 +70,10 @@ public class Lexer {
         A:
         while (true) {
             switch (state) {
-                case 0 -> { // INITIAL STATE
+
+                // START INITIAL STATE
+
+                case 0 -> {
                     char c = charStream.nextChar();
 
                     lexeme.append(c);
@@ -101,6 +104,7 @@ public class Lexer {
                     else if (c == 't') state = 34; // LOGICAL CONSTANTS
                     else if (c == 'f') state = 39;
                     else if (c == '\'') state = 45;
+                    else if (c == '#') state = 48;
                     else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) state = 98;
                     else if (c == '\0') state = 100; // EOF
                     else { // handle exception: invalid character
@@ -108,12 +112,18 @@ public class Lexer {
                     }
                 }
 
-                // START OPERATORS
+                // END INITIAL STATE
+
+                // START WHITE TEXT
 
                 case 1 -> {
                     lexeme.deleteCharAt(lexeme.length() - 1); // deleting white text
                     state = 0;
                 }
+
+                // END WHITE TEXT
+
+                // START OPERATORS
 
                 case 2 -> {                                                                                                  // TEMPLATE
                     symbol = getSymbol(lexeme.toString(), OP_ADD, charStream);                                               // creates new symbol
@@ -538,7 +548,27 @@ public class Lexer {
 
                 // END STRING CONSTANTS
 
-                // TODO continue.................................................
+                // START COMMENTS
+
+                case 48 -> {
+                    char c = charStream.nextChar();
+
+                    if (!(c == '\r' || c == '\n' || c == '\0')) {
+                        lexeme.append(c);
+                        state = 48;
+                    } else {
+                        state = 49;
+                    }
+                }
+
+                case 49 -> {
+                    lexeme.setLength(0); // deleting comment
+                    state = 0;
+                }
+
+                // END COMMENTS
+
+                // START KEYWORDS, IDENTIFIERS
 
                 case 98 -> {
                     char c = charStream.nextChar();
@@ -559,7 +589,10 @@ public class Lexer {
                     addSymbolToListAndClearLexeme(symbol, symbols, lexeme);
                     state = 0;
                 }
-                // TODO continue.................................................
+
+                // START KEYWORDS, IDENTIFIERS
+
+                // START EOF
 
                 case 100 -> {
                     lexeme = new StringBuilder("EOF");
@@ -567,6 +600,8 @@ public class Lexer {
                     addSymbolToListAndClearLexeme(symbol, symbols, lexeme);
                     break A;
                 }
+
+                // START EOF
             }
         }
 
