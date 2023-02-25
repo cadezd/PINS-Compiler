@@ -96,10 +96,11 @@ public class Lexer {
                     else if (c == '=') state = 22;
                     else if (c == '>') state = 25;
                     else if (c == '<') state = 28;
-                    else if (c >= '1' && c <= '9') state = 31; // INT. NUMBERS
+                    else if (c >= '1' && c <= '9') state = 31; // INTEGER CONSTANTS
                     else if (c == '0') state = 33;
-                    else if (c == 't') state = 34;
+                    else if (c == 't') state = 34; // LOGICAL CONSTANTS
                     else if (c == 'f') state = 39;
+                    else if (c == '\'') state = 45;
                     else if (c == '\0') state = 100; // EOF
                     else { // TODO: handle exception
                         break A;
@@ -357,7 +358,7 @@ public class Lexer {
                     if (c == 'r') {
                         lexeme.append(c);
                         state = 35;
-                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else {
@@ -372,7 +373,7 @@ public class Lexer {
                     if (c == 'u') {
                         lexeme.append(c);
                         state = 36;
-                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else {
@@ -387,7 +388,7 @@ public class Lexer {
                     if (c == 'e') {
                         lexeme.append(c);
                         state = 37;
-                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else {
@@ -399,7 +400,7 @@ public class Lexer {
                 case 37 -> {
                     char c = charStream.nextChar();
 
-                    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else {
@@ -420,7 +421,7 @@ public class Lexer {
                     if (c == 'a') {
                         lexeme.append(c);
                         state = 40;
-                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else {
@@ -435,7 +436,7 @@ public class Lexer {
                     if (c == 'l') {
                         lexeme.append(c);
                         state = 41;
-                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else {
@@ -450,7 +451,7 @@ public class Lexer {
                     if (c == 's') {
                         lexeme.append(c);
                         state = 42;
-                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else {
@@ -465,7 +466,7 @@ public class Lexer {
                     if (c == 'e') {
                         lexeme.append(c);
                         state = 43;
-                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else {
@@ -477,7 +478,7 @@ public class Lexer {
                 case 43 -> {
                     char c = charStream.nextChar();
 
-                    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else {
@@ -494,12 +495,51 @@ public class Lexer {
 
                 // END LOGICAL CONSTANTS
 
+                // START STRING CONSTANTS
+
+                case 45 -> {
+                    char c = charStream.nextChar();
+
+                    if (c == '\'') {
+                        lexeme.append(c);
+                        state = 46;
+                    } else if (c >= ' ' && c <= '~') {
+                        lexeme.append(c);
+                        state = 45;
+                    } else {
+                        System.err.println("INVALID CHAR");
+                        // TODO: handle exception invalid char
+                    }
+                }
+
+                case 46 -> {
+                    char c = charStream.nextChar();
+
+                    if (c == '\'') {
+                        lexeme.append(c);
+                        state = 45;
+                    } else if (c == '\0') {
+                        state = 47;
+                    } else {
+                        charStream.back();
+                        state = 47;
+                    }
+                }
+
+                case 47 -> {
+                    symbol = getSymbol(lexeme.toString(), C_STRING, charStream);
+                    addSymbolToListAndClearLexeme(symbol, symbols, lexeme);
+                    state = 0;
+                }
+
+                // END STRING CONSTANTS
+
                 // TODO continue.................................................
 
                 case 98 -> {
                     char c = charStream.nextChar();
 
-                    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||  (c == '_')) {
+                    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
                     } else if (c == '\0') {
@@ -538,7 +578,9 @@ public class Lexer {
         int endLine = charStream.getLine();
         int endColumn = charStream.getColumn();
 
-        if (lexeme.length() == 1)
+        if (type == C_STRING) {
+            return new Symbol(new Position(endLine, endColumn - lexeme.length(), endLine, endColumn - 1), type, lexeme.substring(1, lexeme.length() - 1).replace("''", "'"));
+        } else if (lexeme.length() == 1)
             return new Symbol(new Position(endLine, endColumn - 1, endLine, endColumn - 1), type, lexeme);
 
         return new Symbol(new Position(endLine, endColumn - lexeme.length(), endLine, endColumn - 1), type, lexeme);
