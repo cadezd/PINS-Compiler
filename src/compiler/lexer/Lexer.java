@@ -101,9 +101,10 @@ public class Lexer {
                     else if (c == 't') state = 34; // LOGICAL CONSTANTS
                     else if (c == 'f') state = 39;
                     else if (c == '\'') state = 45;
+                    else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) state = 98;
                     else if (c == '\0') state = 100; // EOF
-                    else { // TODO: handle exception
-                        break A;
+                    else { // handle exception: invalid character
+                        handleError(charStream, lexeme.toString(), "PINS: invalid character", 1);
                     }
                 }
 
@@ -507,8 +508,11 @@ public class Lexer {
                         lexeme.append(c);
                         state = 45;
                     } else {
-                        System.err.println("INVALID CHAR");
-                        // TODO: handle exception invalid char
+                        //  handle exception: invalid character or unclosed string literal
+                        if (c == '\t' | c == '\r' | c == '\n' || c == '\0')
+                            handleError(charStream, lexeme.toString(), "PINS: unclosed string literal", 0);
+                        else
+                            handleError(charStream, lexeme.toString(), "PINS: invalid character", 1);
                     }
                 }
 
@@ -569,7 +573,23 @@ public class Lexer {
         return symbols;
     }
 
-    public void addSymbolToListAndClearLexeme(Symbol symbol, ArrayList<Symbol> symbols, StringBuilder lexeme) {
+    /*AUXILIARY METHODS*/
+    private void handleError(CharStream charStream, String lexeme, String message, int pos) {
+        int endLine = charStream.getLine();
+        int endColumn = charStream.getColumn();
+
+        if (pos == 0) {
+            Report.error(
+                    new Position(endLine, endColumn - lexeme.length(), endLine, endColumn - lexeme.length()),
+                    message);
+        } else {
+            Report.error(
+                    new Position(endLine, endColumn - 1, endLine, endColumn - 1),
+                    message);
+        }
+    }
+
+    private void addSymbolToListAndClearLexeme(Symbol symbol, ArrayList<Symbol> symbols, StringBuilder lexeme) {
         symbols.add(symbol);
         lexeme.setLength(0);
     }
