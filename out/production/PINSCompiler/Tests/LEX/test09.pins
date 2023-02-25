@@ -1,0 +1,9 @@
+# preprost program
+num:integer = 2;
+zmnozek:integer = num*num;
+sum:integer = 0;
+
+# je to zanka?
+for (i:integer = 0; (i > zmnozek) == false; i = i + 1) {
+    sum = sum + i;
+}

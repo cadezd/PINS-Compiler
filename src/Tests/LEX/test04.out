@@ -1,0 +1,9 @@
+[1:1-1:4] C_LOGICAL:true
+[1:6-1:10] C_LOGICAL:false
+[2:1-2:5] C_LOGICAL:false
+[2:7-2:10] C_LOGICAL:true
+[4:1-4:4] C_LOGICAL:true
+[4:6-4:9] C_LOGICAL:true
+[5:1-5:5] C_LOGICAL:false
+[5:7-5:11] C_LOGICAL:false
+EOF:EOF

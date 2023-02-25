@@ -1,0 +1,14 @@
+[1:1-1:3] KW_ARR:arr
+[1:5-1:8] KW_ELSE:else
+[1:10-1:12] KW_FOR:for
+[1:14-1:16] KW_FUN:fun
+[1:18-1:19] KW_IF:if
+[1:21-1:24] KW_THEN:then
+[1:26-1:28] KW_TYP:typ
+[1:30-1:32] KW_VAR:var
+[1:34-1:38] KW_WHERE:where
+[1:40-1:44] KW_WHILE:while
+[2:1-2:7] AT_LOGICAL:logical
+[2:9-2:15] AT_INTEGER:integer
+[2:17-2:22] AT_STRING:string
+EOF:EOF
