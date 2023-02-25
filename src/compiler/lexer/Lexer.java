@@ -72,7 +72,6 @@ public class Lexer {
             switch (state) {
 
                 // START INITIAL STATE
-
                 case 0 -> {
                     char c = charStream.nextChar();
 
