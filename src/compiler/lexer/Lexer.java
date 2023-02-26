@@ -101,9 +101,9 @@ public class Lexer {
                     else if (c >= '0' && c <= '9') state = 31; // INTEGER CONSTANTS
                     else if (c == 't') state = 34; // LOGICAL CONSTANTS
                     else if (c == 'f') state = 39;
-                    else if (c == '\'') state = 45;
-                    else if (c == '#') state = 48;
-                    else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) state = 98;
+                    else if (c == '\'') state = 45; // STRING CONSTANTS
+                    else if (c == '#') state = 48; // COMMENTS
+                    else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c == '_')) state = 98; // KEYWORDS AND IDENTIFIERS
                     else if (c == '\0') state = 100; // EOF
                     else { // handle exception: invalid character
                         handleError(charStream, lexeme.toString(), "PINS: invalid character", 1);
