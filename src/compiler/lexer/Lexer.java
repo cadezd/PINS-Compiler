@@ -98,8 +98,7 @@ public class Lexer {
                     else if (c == '=') state = 22;
                     else if (c == '>') state = 25;
                     else if (c == '<') state = 28;
-                    else if (c >= '1' && c <= '9') state = 31; // INTEGER CONSTANTS
-                    else if (c == '0') state = 33;
+                    else if (c >= '0' && c <= '9') state = 31; // INTEGER CONSTANTS
                     else if (c == 't') state = 34; // LOGICAL CONSTANTS
                     else if (c == 'f') state = 39;
                     else if (c == '\'') state = 45;
@@ -340,6 +339,8 @@ public class Lexer {
                     if (c >= '0' && c <= '9') {
                         lexeme.append(c);
                         state = 31; // loops until there are numbers
+                    } else if (c == '\0') {
+                        state = 32;
                     } else {
                         charStream.back();
                         state = 32;
@@ -347,12 +348,6 @@ public class Lexer {
                 }
 
                 case 32 -> {
-                    symbol = getSymbol(lexeme.toString(), C_INTEGER, charStream);
-                    addSymbolToListAndClearLexeme(symbol, symbols, lexeme);
-                    state = 0;
-                }
-
-                case 33 -> {
                     symbol = getSymbol(lexeme.toString(), C_INTEGER, charStream);
                     addSymbolToListAndClearLexeme(symbol, symbols, lexeme);
                     state = 0;
