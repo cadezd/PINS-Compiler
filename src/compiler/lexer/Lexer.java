@@ -589,7 +589,7 @@ public class Lexer {
                 // START EOF
 
                 case 100 -> {
-                    lexeme = new StringBuilder("EOF");
+                    lexeme = new StringBuilder("$");
                     symbol = getSymbol(lexeme.toString(), EOF, charStream);
                     addSymbolToListAndClearLexeme(symbol, symbols, lexeme);
                     break A;
