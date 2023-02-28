@@ -5,19 +5,15 @@
 
 package compiler.lexer;
 
-import static common.RequireNonNull.requireNonNull;
-import static compiler.lexer.TokenType.*;
-
-import compiler.lexer.Position.Location;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.util.*;
-
 import common.Report;
 
-import javax.sound.midi.Soundbank;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static common.RequireNonNull.requireNonNull;
+import static compiler.lexer.TokenType.*;
 
 public class Lexer {
     /**
