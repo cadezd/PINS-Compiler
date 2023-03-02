@@ -1,9 +1,1 @@
-fun main(){
-    i:integer = 20;
-    sum:integer = 0;
-    while(i < 20){
-        sum += i;
-    }
-
-    avg:integer = sum / 20;
-}
+while != { if true

@@ -99,7 +99,8 @@ public class Lexer {
                     else if (c == 'f') state = 39;
                     else if (c == '\'') state = 45; // STRING CONSTANTS
                     else if (c == '#') state = 48; // COMMENTS
-                    else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c == '_')) state = 98; // KEYWORDS AND IDENTIFIERS
+                    else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c == '_'))
+                        state = 98; // KEYWORDS AND IDENTIFIERS
                     else if (c == '\0') state = 100; // EOF
                     else { // handle exception: invalid character
                         handleError(charStream, lexeme.toString(), "PINS: invalid character", 1);
@@ -404,6 +405,8 @@ public class Lexer {
                     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
+                    } else if (c == '\0') {
+                        state = 38;
                     } else {
                         charStream.back();
                         state = 38;
@@ -482,6 +485,8 @@ public class Lexer {
                     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
+                    } else if (c == '\0') {
+                        state = 44;
                     } else {
                         charStream.back();
                         state = 44;
@@ -599,7 +604,7 @@ public class Lexer {
     }
 
     /*AUXILIARY METHODS*/
-    private void handleError(CharStream charStream, String lexeme, String message, int pos) {
+    private static void handleError(CharStream charStream, String lexeme, String message, int pos) {
         int endLine = charStream.getLine();
         int endColumn = charStream.getColumn();
 
@@ -614,7 +619,7 @@ public class Lexer {
         }
     }
 
-    private void addSymbolToListAndClearLexeme(Symbol symbol, ArrayList<Symbol> symbols, StringBuilder lexeme) {
+    private static void addSymbolToListAndClearLexeme(Symbol symbol, ArrayList<Symbol> symbols, StringBuilder lexeme) {
         symbols.add(symbol);
         lexeme.setLength(0);
     }
@@ -624,10 +629,9 @@ public class Lexer {
         int endColumn = charStream.getColumn();
 
         if (type == C_STRING) {
-            return new Symbol(new Position(endLine, endColumn - lexeme.length(), endLine, endColumn - 1), type, lexeme.substring(1, lexeme.length() - 1).replace("''", "'"));
-        } else if (lexeme.length() == 1)
-            return new Symbol(new Position(endLine, endColumn - 1, endLine, endColumn - 1), type, lexeme);
+            return new Symbol(new Position(endLine, endColumn - lexeme.length(), endLine, endColumn), type, lexeme.substring(1, lexeme.length() - 1).replace("''", "'"));
+        }
 
-        return new Symbol(new Position(endLine, endColumn - lexeme.length(), endLine, endColumn - 1), type, lexeme);
+        return new Symbol(new Position(endLine, endColumn - lexeme.length(), endLine, endColumn), type, lexeme);
     }
 }
