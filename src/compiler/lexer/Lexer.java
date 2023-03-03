@@ -363,6 +363,8 @@ public class Lexer {
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
+                    } else if (c == '\0') {
+                        state = 99;
                     } else {
                         charStream.back();
                         state = 99;
@@ -378,6 +380,8 @@ public class Lexer {
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
+                    } else if (c == '\0') {
+                        state = 99;
                     } else {
                         charStream.back();
                         state = 99;
@@ -393,6 +397,8 @@ public class Lexer {
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
+                    } else if (c == '\0') {
+                        state = 99;
                     } else {
                         charStream.back();
                         state = 99;
@@ -428,6 +434,8 @@ public class Lexer {
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
+                    } else if (c == '\0') {
+                        state = 99;
                     } else {
                         charStream.back();
                         state = 99;
@@ -443,6 +451,8 @@ public class Lexer {
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
+                    } else if (c == '\0') {
+                        state = 99;
                     } else {
                         charStream.back();
                         state = 99;
@@ -458,6 +468,8 @@ public class Lexer {
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
+                    } else if (c == '\0') {
+                        state = 99;
                     } else {
                         charStream.back();
                         state = 99;
@@ -473,6 +485,8 @@ public class Lexer {
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
+                    } else if (c == '\0') {
+                        state = 99;
                     } else {
                         charStream.back();
                         state = 99;
