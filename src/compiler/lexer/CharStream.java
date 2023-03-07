@@ -26,6 +26,8 @@ public class CharStream {
             this.line++;
             this.prevColumn = column;
             this.column = 1;
+        } else if (c == '\t') { // TAB equals 4 spaces
+            this.column += 4;
         } else
             this.column++;
 
@@ -51,6 +53,8 @@ public class CharStream {
         if (c == '\n') {
             this.line--;
             this.column = this.prevColumn;
+        } else if (c == '\t') { // TAB equals 4 spaces
+            this.column -= 4;
         } else
             this.column--;
     }
