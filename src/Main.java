@@ -4,12 +4,15 @@
  */
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Optional;
 
 import cli.PINS;
 import cli.PINS.Phase;
 import compiler.lexer.Lexer;
+import compiler.parser.Parser;
 
 public class Main {
     /**
@@ -41,7 +44,17 @@ public class Main {
                 System.out.println(symbol.toString());
             }
         }
-        if (cli.execPhase == Phase.LEX) {
+
+
+        /**
+         * Izvedi sintaksno analizo.
+         */
+        Optional<PrintStream> out = cli.dumpPhases.contains(Phase.SYN) 
+                ? Optional.of(System.out)
+                : Optional.empty();
+        var parser = new Parser(symbols, out);
+        parser.parse();
+        if (cli.execPhase == Phase.SYN) {
             return;
         }
     }
