@@ -1,0 +1,83 @@
+source -> definitions .
+
+definitions -> definition definitions1 .
+definitions1 -> epsylon | ";" definitions . 
+
+definition -> function_definition .
+definition -> type_definition .
+definition -> variable_definition .
+
+type_definition -> typ identifier ":" type .
+
+type -> identifier .
+type -> logical .
+type -> integer .
+type -> string .
+type -> arr "[" int_const "]" type .
+
+function_definition -> fun identifier "(" parameters ")" ":" type "=" expression .
+
+parameters -> parameter parameters1 .
+parameters1 -> epsylon | "," parameters .
+
+parameter -> identifier ":" type .
+
+expression -> logical_ior_expression expression1.
+expression1 -> epsylon | "{" WHERE definitions "}" .
+
+
+# OR stavki
+logical_ior_expression -> logical_and_expression logical_ior_expression1 .
+logical_ior_expression1 -> epsylon | "|" logical_ior_expression .
+
+# AND stavki
+logical_and_expression -> compare_expression logical_and_expression1 .
+logical_and_expression1 -> epsylon | "&" logical_and_expression .
+
+
+
+# compare stavki
+compare_expression -> additive_expression compare_expression1 . 
+compare_expression1 -> epsylon | "==" additive_expression | "!=" additive_expression | "<" complementary_compare_expression | ">" complementary_compare_expression .
+complementary_compare_expression -> "=" additive_expression | additive_expression .
+
+
+# +, - stavki
+additive_expression -> multiplicative_expression additive_expression1 .
+additive_expression1 -> epsylon | "+" additive_expression | "-" additive_expression .
+
+
+# * / % stavki
+multiplicative_expression -> prefix_expression multiplicative_expression1 .
+multiplicative_expression1 -> epsylon | "*" multiplicative_expression | "/" multiplicative_expression | "%" multiplicative_expression . 
+
+
+# prefiksni izrazi
+prefix_expression -> "+" prefix_expression | "-" prefix_expression | "!" prefix_expression | postfix_expression .
+
+
+# postfiksni izrazi
+postfix_expression -> atom_expression postfix_expression1 .
+postfix_expression1 -> epsylon | "[" expression "]" postfix_expression1 . 
+
+
+# atomarnmi izrazi
+atom_expression -> log_constant | int_constant | str_constant | identifier identifier1 | "(" expressions ")" | "{" other_atom_expressions "}" .
+identifier1 -> epsylon | "(" expressions ")" .
+other_atom_expressions -> expression "=" expression | if_else_expression if_then_else_expression | while_expression | for_expression .
+if_else_expression -> if expression then expression . 
+if_then_else_expression -> epsylon | else expression .
+while_expression -> while expression ":" expression .
+for_expression ->  for identifier "=" expression "," expression "," expression ":" expression . 
+
+
+# izrazi
+expressions -> expression expressions1 .
+expressions1 -> epsylon | "," expressions . 
+
+
+# definicija spremenljivke
+variable_definition -> var identifier ":" type .
+
+# prazen niz
+epsylon -> .
