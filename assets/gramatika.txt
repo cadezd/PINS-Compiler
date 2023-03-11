@@ -1,7 +1,7 @@
 source -> definitions .
 
 definitions -> definition definitions1 .
-definitions1 -> epsylon | ";" definitions . 
+definitions1 -> epsylon | ";" definitions .
 
 definition -> function_definition .
 definition -> type_definition .
@@ -22,7 +22,7 @@ parameters1 -> epsylon | "," parameters .
 
 parameter -> identifier ":" type .
 
-expression -> logical_ior_expression expression1.
+expression -> logical_ior_expression expression1 .
 expression1 -> epsylon | "{" WHERE definitions "}" .
 
 
@@ -37,9 +37,8 @@ logical_and_expression1 -> epsylon | "&" logical_and_expression .
 
 
 # compare stavki
-compare_expression -> additive_expression compare_expression1 . 
-compare_expression1 -> epsylon | "==" additive_expression | "!=" additive_expression | "<" complementary_compare_expression | ">" complementary_compare_expression .
-complementary_compare_expression -> "=" additive_expression | additive_expression .
+compare_expression -> additive_expression compare_expression1 .
+compare_expression1 -> epsylon | "==" additive_expression | "!=" additive_expression | "<=" additive_expression | ">=" additive_expression | "<" additive_expression | ">" additive_expression.
 
 
 # +, - stavki
@@ -49,7 +48,7 @@ additive_expression1 -> epsylon | "+" additive_expression | "-" additive_express
 
 # * / % stavki
 multiplicative_expression -> prefix_expression multiplicative_expression1 .
-multiplicative_expression1 -> epsylon | "*" multiplicative_expression | "/" multiplicative_expression | "%" multiplicative_expression . 
+multiplicative_expression1 -> epsylon | "*" multiplicative_expression | "/" multiplicative_expression | "%" multiplicative_expression .
 
 
 # prefiksni izrazi
@@ -58,22 +57,24 @@ prefix_expression -> "+" prefix_expression | "-" prefix_expression | "!" prefix_
 
 # postfiksni izrazi
 postfix_expression -> atom_expression postfix_expression1 .
-postfix_expression1 -> epsylon | "[" expression "]" postfix_expression1 . 
+postfix_expression1 -> epsylon | "[" expression "]" postfix_expression1 .
 
 
 # atomarnmi izrazi
 atom_expression -> log_constant | int_constant | str_constant | identifier identifier1 | "(" expressions ")" | "{" other_atom_expressions "}" .
 identifier1 -> epsylon | "(" expressions ")" .
-other_atom_expressions -> expression "=" expression | if_else_expression if_then_else_expression | while_expression | for_expression .
-if_else_expression -> if expression then expression . 
+
+other_atom_expressions -> if_else_expression if_then_else_expression | while_expression | for_expression | expression "=" expression .
+
+if_else_expression -> if expression then expression .
 if_then_else_expression -> epsylon | else expression .
 while_expression -> while expression ":" expression .
-for_expression ->  for identifier "=" expression "," expression "," expression ":" expression . 
+for_expression ->  for identifier "=" expression "," expression "," expression ":" expression .
 
 
 # izrazi
 expressions -> expression expressions1 .
-expressions1 -> epsylon | "," expressions . 
+expressions1 -> epsylon | "," expressions .
 
 
 # definicija spremenljivke
