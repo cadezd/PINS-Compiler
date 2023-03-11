@@ -103,7 +103,7 @@ public class Lexer {
                         state = 98; // KEYWORDS AND IDENTIFIERS
                     else if (c == '\0') state = 100; // EOF
                     else { // handle exception: invalid character
-                        handleError(charStream, lexeme.toString(), "PINS: invalid character", 1);
+                        handleError(charStream, lexeme.toString(), "PINS error: invalid character", 1);
                     }
                 }
 
@@ -529,9 +529,9 @@ public class Lexer {
                     } else {
                         //  handle exception: invalid character or unclosed string literal
                         if (c == '\t' | c == '\r' | c == '\n' || c == '\0')
-                            handleError(charStream, lexeme.toString(), "PINS: unclosed string literal", 0);
+                            handleError(charStream, lexeme.toString(), "PINS error: unclosed string literal", 0);
                         else
-                            handleError(charStream, lexeme.toString(), "PINS: invalid character", 1);
+                            handleError(charStream, lexeme.toString(), "PINS error: invalid character", 1);
                     }
                 }
 
