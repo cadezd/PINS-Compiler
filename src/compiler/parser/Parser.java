@@ -44,7 +44,6 @@ public class Parser {
     }
 
     private void parseSource() {
-        // TODO: - rekurzivno spuščanje
         dump("source -> definitions");
         parseDefinitions();
     }
@@ -55,7 +54,7 @@ public class Parser {
         parseDefinition1();
 
         if (!check(EOF) && !check(OP_RBRACE))
-            Report.error(getSymbol().position, "PINS error1: ';' or '}' expected");
+            Report.error(getSymbol().position, "PINS error: ';' or '}' expected");
     }
 
     private void parseDefinition() {
@@ -72,8 +71,7 @@ public class Parser {
             skip();
             parseVariableDefinition();
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error2: not a statement");
+            Report.error(getSymbol().position, "PINS error: not a statement");
         }
     }
 
@@ -92,15 +90,13 @@ public class Parser {
             dump("function_definition -> fun identifier \"(\" parameters \")\" \":\" type \"=\" expression");
             skip();
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error3: <identifier> expected");
+            Report.error(getSymbol().position, "PINS error: <identifier> expected");
         }
 
         if (check(OP_LPARENT)) {
             skip();
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error4: '(' expected");
+            Report.error(getSymbol().position, "PINS error: '(' expected");
         }
 
         parseParameters();
@@ -108,15 +104,13 @@ public class Parser {
         if (check(OP_RPARENT)) {
             skip();
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error5: ')' expected");
+            Report.error(getSymbol().position, "PINS error: ')' expected");
         }
 
         if (check(OP_COLON)) {
             skip();
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error6: ':' expected");
+            Report.error(getSymbol().position, "PINS error: ':' expected");
         }
 
         parseType();
@@ -124,8 +118,7 @@ public class Parser {
         if (check(OP_ASSIGN)) {
             skip();
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error7: '=' expected");
+            Report.error(getSymbol().position, "PINS error: '=' expected");
         }
 
         parseExpression();
@@ -145,8 +138,7 @@ public class Parser {
             if (check(KW_WHERE))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error8: WHERE keyword expected");
+                Report.error(getSymbol().position, "PINS error: WHERE keyword expected");
             }
 
             parseDefinitions();
@@ -154,8 +146,7 @@ public class Parser {
             if (check(OP_RBRACE))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error9: '}' expected");
+                Report.error(getSymbol().position, "PINS error: '}' expected");
             }
 
         } else {
@@ -311,8 +302,7 @@ public class Parser {
             if (check(OP_RBRACKET))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error10: ']' expected");
+                Report.error(getSymbol().position, "PINS error: ']' expected");
             }
 
             parsePostfixExpression1();
@@ -344,8 +334,7 @@ public class Parser {
             if (check(OP_RPARENT))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error11: ')' expected");
+                Report.error(getSymbol().position, "PINS error: ')' expected");
             }
         } else if (check(OP_LBRACE)) {
             dump("atom_expression -> \"{\" other_atom_expressions \"}\"");
@@ -356,12 +345,11 @@ public class Parser {
             if (check(OP_RBRACE))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error12: '}' expected");
+                Report.error(getSymbol().position, "PINS error: '}' expected");
             }
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error13: not a statement");
+
+            Report.error(getSymbol().position, "PINS error: not a statement");
         }
     }
 
@@ -375,8 +363,7 @@ public class Parser {
             if (check(OP_RPARENT))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error14: ')' expected");
+                Report.error(getSymbol().position, "PINS error: ')' expected");
             }
         } else {
             dump("identifier1 -> epsylon");
@@ -384,16 +371,16 @@ public class Parser {
     }
 
     private void parseOtnerAtomExpressions() {
-        if (check(KW_IF)){
+        if (check(KW_IF)) {
             dump("other_atom_expressions -> if_else_expression if_then_else_expression");
             skip();
             parseIfElseExpression();
             parseIfThenElseExpression();
-        } else if (check(KW_WHILE)){
+        } else if (check(KW_WHILE)) {
             dump("other_atom_expressions ->  while_expression ");
             skip();
             parseWhileExpression();
-        } else if (check(KW_FOR)){
+        } else if (check(KW_FOR)) {
             dump("other_atom_expressions -> for_expression");
             skip();
             parseForExpression();
@@ -404,8 +391,7 @@ public class Parser {
             if (check(OP_ASSIGN))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error15: '=' expected");
+                Report.error(getSymbol().position, "PINS error: '=' expected");
             }
 
             parseExpression();
@@ -419,15 +405,14 @@ public class Parser {
         if (check(KW_THEN))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error16: THEN keyword expected");
+            Report.error(getSymbol().position, "PINS error: THEN keyword expected");
         }
 
         parseExpression();
     }
 
     private void parseIfThenElseExpression() {
-        if(check(KW_ELSE)) {
+        if (check(KW_ELSE)) {
             dump("if_then_else_expression -> else expression");
             skip();
             parseExpression();
@@ -444,8 +429,7 @@ public class Parser {
         if (check(OP_COLON))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error17: ':' expected");
+            Report.error(getSymbol().position, "PINS error: ':' expected");
         }
 
         parseExpression();
@@ -457,15 +441,13 @@ public class Parser {
         if (check(IDENTIFIER))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error18: <identifier> expected");
+            Report.error(getSymbol().position, "PINS error: <identifier> expected");
         }
 
         if (check(OP_ASSIGN))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error19: '=' expected " + getSymbol().lexeme);
+            Report.error(getSymbol().position, "PINS error: '=' expected " + getSymbol().lexeme);
         }
 
         parseExpression();
@@ -473,8 +455,7 @@ public class Parser {
         if (check(OP_COMMA))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error20: ',' expected");
+            Report.error(getSymbol().position, "PINS error: ',' expected");
         }
 
         parseExpression();
@@ -482,8 +463,7 @@ public class Parser {
         if (check(OP_COMMA))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error21: ',' expected");
+            Report.error(getSymbol().position, "PINS error: ',' expected");
         }
 
         parseExpression();
@@ -491,8 +471,7 @@ public class Parser {
         if (check(OP_COLON))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error22: ':' expected");
+            Report.error(getSymbol().position, "PINS error: ':' expected");
         }
 
         parseExpression();
@@ -506,7 +485,7 @@ public class Parser {
     }
 
     private void parseExpressions1() {
-        if(check(OP_COMMA)){
+        if (check(OP_COMMA)) {
             dump("expressions1 -> \",\" expressions");
             skip();
             parseExpressions();
@@ -537,15 +516,13 @@ public class Parser {
             dump("parameter -> identifier \":\" type ");
             skip();
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error23: <identifier> expected");
+            Report.error(getSymbol().position, "PINS error: <identifier> expected");
         }
 
         if (check(OP_COLON))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error24: ':' expected");
+            Report.error(getSymbol().position, "PINS error: ':' expected");
         }
 
         parseType();
@@ -556,15 +533,13 @@ public class Parser {
             dump("variable_definition -> var identifier \":\" type");
             skip();
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error25: <identifier> expected");
+            Report.error(getSymbol().position, "PINS error: <identifier> expected");
         }
 
         if (check(OP_COLON))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error26: ':' expected");
+            Report.error(getSymbol().position, "PINS error: ':' expected");
         }
 
         parseType();
@@ -575,15 +550,13 @@ public class Parser {
             dump("type_definition -> typ identifier \":\" type");
             skip();
         } else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error27: <identifier> expected");
+            Report.error(getSymbol().position, "PINS error: <identifier> expected");
         }
 
         if (check(OP_COLON))
             skip();
         else {
-            // TODO: error
-            Report.error(getSymbol().position, "PINS error28: ':' expected");
+            Report.error(getSymbol().position, "PINS error: ':' expected");
         }
 
         parseType();
@@ -609,28 +582,24 @@ public class Parser {
             if (check(OP_LBRACKET))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error29: '[' expected");
+                Report.error(getSymbol().position, "PINS error: '[' expected");
             }
 
             if (check(C_INTEGER))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error30: array dimension missing");
+                Report.error(getSymbol().position, "PINS error: array dimension missing");
             }
 
             if (check(OP_RBRACKET))
                 skip();
             else {
-                // TODO: error
-                Report.error(getSymbol().position, "PINS error31: ']' expected");
+                Report.error(getSymbol().position, "PINS error: ']' expected");
             }
 
             parseType();
         } else {
-            // TODO: ERROR
-            Report.error(getSymbol().position, "PINS error32: type definition required");
+            Report.error(getSymbol().position, "PINS error: type definition required");
         }
     }
 
