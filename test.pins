@@ -1,9 +1,1 @@
-fun nek_random_identifier123 ( nek_random_identifier123 : string ) : string = 'neka random string konstanta' { where var nek_random_identifier123 : logical };
-fun nek_random_identifier123 ( nek_random_identifier123 : string ) : string = 'neka random string konstanta' { where var nek_random_identifier123 : nek_random_identifier123 };
-fun nek_random_identifier123 ( nek_random_identifier123 : string ) : string = 'neka random string konstanta' { where var nek_random_identifier123 : arr [ 123 ] string };
-fun nek_random_identifier123 ( nek_random_identifier123 : string ) : string = 'neka random string konstanta' { where var nek_random_identifier123 : arr [ 123 ] integer };
-fun nek_random_identifier123 ( nek_random_identifier123 : string ) : string = 'neka random string konstanta' { where var nek_random_identifier123 : arr [ 123 ] logical ; var nek_random_identifier123 : integer };
-fun nek_random_identifier123 ( nek_random_identifier123 : string ) : string = 'neka random string konstanta' { where var nek_random_identifier123 : arr [ 123 ] logical ; var nek_random_identifier123 : logical };
-fun nek_random_identifier123 ( nek_random_identifier123 : string ) : string = 'neka random string konstanta' { where var nek_random_identifier123 : arr [ 123 ] logical ; var nek_random_identifier123 : nek_random_identifier123 };
-fun nek_random_identifier123 ( nek_random_identifier123 : string ) : string = 'neka random string konstanta' { where var nek_random_identifier123 : arr [ 123 ]  nek_random_identifier123 ; typ nek_random_identifier123 : string };
-fun nek_random_identifier123 ( nek_random_identifier123 : string, nek_random_identifier123 : integer, nek_random_identifier123 : logical ) : string = 'neka random string konstanta' { where var nek_random_identifier123 : arr [ 123 ] nek_random_identifier123 ; typ nek_random_identifier123 : integer }
+fun id ( neki : integer ) : logical = neki == 99

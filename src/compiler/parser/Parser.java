@@ -6,17 +6,15 @@
 package compiler.parser;
 
 import static compiler.lexer.TokenType.*;
-import static common.RequireNonNull.requireNonNull;
+import static compiler.common.RequireNonNull.requireNonNull;
 
 import java.io.PrintStream;
 import java.util.List;
 import java.util.Optional;
 
-import common.Report;
-import compiler.lexer.Position;
+import compiler.common.Report;
 import compiler.lexer.Symbol;
 import compiler.lexer.TokenType;
-import jdk.jshell.Snippet;
 
 public class Parser {
     /**

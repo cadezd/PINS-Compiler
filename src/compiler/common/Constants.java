@@ -1,4 +1,4 @@
-package common;
+package compiler.common;
 
 public class Constants {
     private Constants() {}
