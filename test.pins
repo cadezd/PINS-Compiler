@@ -1,1 +1,3 @@
-fun id ( neki : integer ) : logical = neki == 99
+var x : integer;
+var y : string
+var z error
