@@ -1,3 +1,2 @@
-var x : integer;
-var y : string
-var z error
+# fail at function definition (')')
+fun id (a:integer, b:integer rparent : integer = a + b

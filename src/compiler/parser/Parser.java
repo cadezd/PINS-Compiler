@@ -77,7 +77,8 @@ public class Parser {
         if (check(OP_SEMICOLON)) {
             dump("definitions1 -> \";\" definitions");
             skip();
-            parseDefinitions();
+            parseDefinition();
+            parseDefinition1();
         } else {
             dump("definitions1 -> epsylon");
         }
@@ -162,7 +163,8 @@ public class Parser {
         if (check(OP_OR)) {
             dump("logical_ior_expression1 -> \"|\" logical_ior_expression");
             skip();
-            parseLogicalIORExpression();
+            parseLogicalANDExpression();
+            parseLogicalIORExpression1();
         } else {
             dump("logical_ior_expression1 -> epsylon");
         }
@@ -179,7 +181,8 @@ public class Parser {
         if (check(OP_AND)) {
             dump("logical_and_expression1 -> \"&\" logical_and_expression");
             skip();
-            parseLogicalANDExpression();
+            parseCompareExpression();
+            parseLogicalANDExpression1();
         } else {
             dump("logical_and_expression1 -> epsylon");
         }
@@ -231,11 +234,13 @@ public class Parser {
         if (check(OP_ADD)) {
             dump("additive_expression1 -> \"+\" additive_expression");
             skip();
-            parseAdditiveExpression();
+            parseMultiplicativeExpression();
+            parseAdditiveExpression1();
         } else if (check(OP_SUB)) {
             dump("additive_expression1 -> \"-\" additive_expression");
             skip();
-            parseAdditiveExpression();
+            parseMultiplicativeExpression();
+            parseAdditiveExpression1();
         } else {
             dump("additive_expression1 -> epsylon");
         }
@@ -251,15 +256,18 @@ public class Parser {
         if (check(OP_MUL)) {
             dump("multiplicative_expression1 ->  \"*\" multiplicative_expression");
             skip();
-            parseMultiplicativeExpression();
+            parsePrefixExpression();
+            parseMultiplicativeExpression1();
         } else if (check(OP_DIV)) {
             dump("multiplicative_expression1 ->  \"/\" multiplicative_expression");
             skip();
-            parseMultiplicativeExpression();
+            parsePrefixExpression();
+            parseMultiplicativeExpression1();
         } else if (check(OP_MOD)) {
             dump("multiplicative_expression1 ->  \"%\" multiplicative_expression");
             skip();
-            parseMultiplicativeExpression();
+            parsePrefixExpression();
+            parseMultiplicativeExpression1();
         } else {
             dump("multiplicative_expression1 -> epsylon");
         }
@@ -486,7 +494,8 @@ public class Parser {
         if (check(OP_COMMA)) {
             dump("expressions1 -> \",\" expressions");
             skip();
-            parseExpressions();
+            parseExpression();
+            parseExpressions1();
         } else {
             dump("expressions1 -> epsylon");
         }
@@ -503,7 +512,8 @@ public class Parser {
         if (check(OP_COMMA)) {
             dump("parameters1 ->  \",\" parameters");
             skip();
-            parseParameters();
+            parseParameter();
+            parseParameters1();
         } else {
             dump("parameters1 -> epsylon");
         }
