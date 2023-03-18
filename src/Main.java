@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import cli.PINS;
 import cli.PINS.Phase;
+import compiler.common.PrettyPrintVisitor1;
 import compiler.lexer.Lexer;
 import compiler.parser.Parser;
 
@@ -54,8 +55,18 @@ public class Main {
                 ? Optional.of(System.out)
                 : Optional.empty();
         var parser = new Parser(symbols, out);
-        parser.parse();
+        var ast = parser.parse();
         if (cli.execPhase == Phase.SYN) {
+            return;
+        }
+        /**
+         * Abstraktna sintaksa.
+         */
+        var prettyPrint = new PrettyPrintVisitor1(2, System.out);
+        if (cli.dumpPhases.contains(Phase.AST)) {
+            ast.accept(prettyPrint);
+        }
+        if (cli.execPhase == Phase.AST) {
             return;
         }
     }

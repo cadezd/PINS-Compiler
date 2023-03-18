@@ -22,5 +22,8 @@ public class TypeName extends Type {
         this.identifier = identifier;
     }
 
-	@Override public void accept(Visitor visitor) { visitor.visit(this); }
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 }
