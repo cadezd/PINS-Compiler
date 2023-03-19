@@ -5,14 +5,6 @@
 
 package compiler.parser;
 
-import static compiler.lexer.TokenType.*;
-import static compiler.common.RequireNonNull.requireNonNull;
-
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
 import compiler.common.Report;
 import compiler.lexer.Position;
 import compiler.lexer.Symbol;
@@ -25,7 +17,13 @@ import compiler.parser.ast.type.Atom;
 import compiler.parser.ast.type.Type;
 import compiler.parser.ast.type.TypeName;
 
-import javax.swing.plaf.DesktopPaneUI;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import static compiler.common.RequireNonNull.requireNonNull;
+import static compiler.lexer.TokenType.*;
 
 public class Parser {
     /**
@@ -52,13 +50,12 @@ public class Parser {
         return parseSource();
     }
 
-    private Ast parseSource() {
+    private Defs parseSource() {
         dump("source -> definitions");
         return parseDefinitions();
     }
 
-    private Ast parseDefinitions() {
-        // TODO: dodelaj
+    private Defs parseDefinitions() {
         dump("definitions -> definition definitions1");
         List<Def> definitions = new ArrayList<>();
         definitions.add(parseDefinition());
@@ -82,7 +79,6 @@ public class Parser {
             return parseTypeDefinition(typSymbol);
 
         } else if (check(KW_FUN)) {
-            // TODO: dodelaj
             dump("definition -> function_definition");
             Symbol funSymbol = skip();
             return parseFunctionDefinition(funSymbol);
@@ -135,7 +131,6 @@ public class Parser {
             Report.error(getSymbol().position, "PINS error: '=' expected");
         skip();
 
-        // TODO: dodelaj expressions
         Expr funExpression = parseExpression();
         return new FunDef(
                 new Position(startSymbol.position.start, funExpression.position.end),
@@ -147,217 +142,315 @@ public class Parser {
     }
 
     private Expr parseExpression() {
-        //  TODO: dodelaj
         dump("expression -> logical_ior_expression expression1");
-        parseLogicalIORExpression();
-        parseExpression1();
-        return null;
+        Expr leftExpression = parseLogicalIORExpression();
+        return parseExpression1(leftExpression);
     }
 
-    private void parseExpression1() {
+    private Expr parseExpression1(Expr leftExpression) {
         //  TODO: dodelaj
         if (check(OP_LBRACE)) {
             dump("expression1 -> \"{\" WHERE definitions \"}\"");
             skip();
 
-            if (check(KW_WHERE))
-                skip();
-            else {
+            if (!check(KW_WHERE))
                 Report.error(getSymbol().position, "PINS error: WHERE keyword expected");
-            }
+            skip();
 
-            parseDefinitions();
+            Defs definitions = parseDefinitions();
 
-            if (check(OP_RBRACE))
-                skip();
-            else {
+            if (!check(OP_RBRACE))
                 Report.error(getSymbol().position, "PINS error: '}' expected");
-            }
+            skip();
 
+            return new Where(
+                    new Position(leftExpression.position.start, definitions.position.end),
+                    leftExpression,
+                    definitions
+            );
         } else {
             dump("expression1 -> epsylon");
+            return leftExpression;
         }
     }
 
-    private void parseLogicalIORExpression() {
-        //  TODO: dodelaj
+    private Expr parseLogicalIORExpression() {
         dump("logical_ior_expression -> logical_and_expression logical_ior_expression1");
-        parseLogicalANDExpression();
-        parseLogicalIORExpression1();
+        Expr leftExpression = parseLogicalANDExpression();
+        return parseLogicalIORExpression1(leftExpression);
     }
 
-    private void parseLogicalIORExpression1() {
-        //  TODO: dodelaj
+    private Expr parseLogicalIORExpression1(Expr leftExpression) {
         if (check(OP_OR)) {
             dump("logical_ior_expression1 -> \"|\" logical_ior_expression");
             skip();
-            parseLogicalANDExpression();
-            parseLogicalIORExpression1();
+            Expr rightExpression = parseLogicalANDExpression();
+            Expr binary = new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.OR,
+                    rightExpression
+            );
+            return parseLogicalIORExpression1(binary);
         } else {
             dump("logical_ior_expression1 -> epsylon");
+            return leftExpression;
         }
     }
 
 
-    private void parseLogicalANDExpression() {
-        //  TODO: dodelaj
+    private Expr parseLogicalANDExpression() {
         dump("logical_and_expression -> compare_expression logical_and_expression1");
-        parseCompareExpression();
-        parseLogicalANDExpression1();
+        Expr leftExpression = parseCompareExpression();
+        return parseLogicalANDExpression1(leftExpression);
     }
 
-    private void parseLogicalANDExpression1() {
-        //  TODO: dodelaj
+    private Expr parseLogicalANDExpression1(Expr leftExpression) {
         if (check(OP_AND)) {
             dump("logical_and_expression1 -> \"&\" logical_and_expression");
             skip();
-            parseCompareExpression();
-            parseLogicalANDExpression1();
+            Expr rightExpression = parseCompareExpression();
+            Expr binary = new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.AND,
+                    rightExpression
+            );
+            return parseLogicalANDExpression1(binary);
+
         } else {
             dump("logical_and_expression1 -> epsylon");
+            return leftExpression;
         }
     }
 
-    private void parseCompareExpression() {
-        //  TODO: dodelaj
+    private Expr parseCompareExpression() {
         dump("compare_expression -> additive_expression compare_expression1");
-        parseAdditiveExpression();
-        parseCompareExpression1();
+        Expr leftExpression = parseAdditiveExpression();
+        return parseCompareExpression1(leftExpression);
     }
 
-    private void parseCompareExpression1() {
-        //  TODO: dodelaj
+    private Expr parseCompareExpression1(Expr leftExpression) {
         if (check(OP_EQ)) {
             dump("compare_expression1 -> \"==\" additive_expression");
             skip();
-            parseAdditiveExpression();
+            Expr rightExpression = parseAdditiveExpression();
+            return new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.EQ,
+                    rightExpression
+            );
+
         } else if (check(OP_NEQ)) {
             dump("compare_expression1 -> \"!=\" additive_expression");
             skip();
-            parseAdditiveExpression();
+            Expr rightExpression = parseAdditiveExpression();
+            return new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.NEQ,
+                    rightExpression
+            );
+
         } else if (check(OP_LEQ)) {
             dump("compare_expression1 -> \"<=\" additive_expression");
             skip();
-            parseAdditiveExpression();
+            Expr rightExpression = parseAdditiveExpression();
+            return new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.LEQ,
+                    rightExpression
+            );
+
         } else if (check(OP_GEQ)) {
             dump("compare_expression1 -> \">=\" additive_expression");
             skip();
-            parseAdditiveExpression();
+            Expr rightExpression = parseAdditiveExpression();
+            return new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.GEQ,
+                    rightExpression
+            );
+
         } else if (check(OP_LT)) {
             dump("compare_expression1 -> \"<\" additive_expression");
             skip();
-            parseAdditiveExpression();
+            Expr rightExpression = parseAdditiveExpression();
+            return new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.LT,
+                    rightExpression
+            );
+
         } else if (check(OP_GT)) {
             dump("compare_expression1 -> \">\" additive_expression");
             skip();
-            parseAdditiveExpression();
+            Expr rightExpression = parseAdditiveExpression();
+            return new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.GT,
+                    rightExpression
+            );
+
         } else {
             dump("compare_expression1 -> epsylon");
+            return leftExpression;
         }
     }
 
-    private void parseAdditiveExpression() {
-        //  TODO: dodelaj
+    private Expr parseAdditiveExpression() {
+
         dump("additive_expression -> multiplicative_expression additive_expression1");
-        parseMultiplicativeExpression();
-        parseAdditiveExpression1();
+        Expr leftExpression = parseMultiplicativeExpression();
+        return parseAdditiveExpression1(leftExpression);
     }
 
-    private void parseAdditiveExpression1() {
-        //  TODO: dodelaj
+    private Expr parseAdditiveExpression1(Expr leftExpression) {
         if (check(OP_ADD)) {
             dump("additive_expression1 -> \"+\" additive_expression");
             skip();
-            parseMultiplicativeExpression();
-            parseAdditiveExpression1();
+            Expr rightExpression = parseMultiplicativeExpression();
+            Expr binary = new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.ADD,
+                    rightExpression
+            );
+
+            return parseAdditiveExpression1(binary);
         } else if (check(OP_SUB)) {
             dump("additive_expression1 -> \"-\" additive_expression");
-            skip();
-            parseMultiplicativeExpression();
-            parseAdditiveExpression1();
+            Expr rightExpression = parseMultiplicativeExpression();
+            Expr binary = new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.SUB,
+                    rightExpression
+            );
+
+            return parseAdditiveExpression1(binary);
         } else {
             dump("additive_expression1 -> epsylon");
+            return leftExpression;
         }
     }
 
-    private void parseMultiplicativeExpression() {
-        //  TODO: dodelaj
+    private Expr parseMultiplicativeExpression() {
         dump("multiplicative_expression -> prefix_expression multiplicative_expression1");
-        parsePrefixExpression();
-        parseMultiplicativeExpression1();
+        Expr leftExpression = parsePrefixExpression();
+        return parseMultiplicativeExpression1(leftExpression);
     }
 
-    private void parseMultiplicativeExpression1() {
-        //  TODO: dodelaj
+    private Expr parseMultiplicativeExpression1(Expr leftExpression) {
         if (check(OP_MUL)) {
             dump("multiplicative_expression1 ->  \"*\" multiplicative_expression");
             skip();
-            parsePrefixExpression();
-            parseMultiplicativeExpression1();
+            Expr rightExpression = parsePrefixExpression();
+            Expr binary = new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.MUL,
+                    rightExpression
+            );
+            return parseMultiplicativeExpression1(binary);
+
         } else if (check(OP_DIV)) {
             dump("multiplicative_expression1 ->  \"/\" multiplicative_expression");
             skip();
-            parsePrefixExpression();
-            parseMultiplicativeExpression1();
+            Expr rightExpression = parsePrefixExpression();
+            Expr binary = new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.DIV,
+                    rightExpression
+            );
+            return parseMultiplicativeExpression1(binary);
+
         } else if (check(OP_MOD)) {
             dump("multiplicative_expression1 ->  \"%\" multiplicative_expression");
             skip();
-            parsePrefixExpression();
-            parseMultiplicativeExpression1();
+            Expr rightExpression = parsePrefixExpression();
+            Expr binary = new Binary(
+                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    leftExpression,
+                    Binary.Operator.MOD,
+                    rightExpression
+            );
+            return parseMultiplicativeExpression1(binary);
+
         } else {
             dump("multiplicative_expression1 -> epsylon");
+            return leftExpression;
         }
     }
 
-    private void parsePrefixExpression() {
-        //  TODO: dodelaj
+    private Expr parsePrefixExpression() {
         if (check(OP_ADD)) {
             dump("prefix_expression -> \"+\" prefix_expression");
             skip();
-            parsePrefixExpression();
+            Expr expression = parsePrefixExpression();
+            return new Unary(
+                    expression.position,
+                    expression,
+                    Unary.Operator.ADD
+            );
+
         } else if (check(OP_SUB)) {
             dump("prefix_expression -> \"-\" prefix_expression");
             skip();
-            parsePrefixExpression();
+            Expr expression = parsePrefixExpression();
+            return new Unary(
+                    expression.position,
+                    expression,
+                    Unary.Operator.SUB
+            );
+
         } else if (check(OP_NOT)) {
             dump("prefix_expression -> \"!\" prefix_expression");
             skip();
-            parsePrefixExpression();
+            Expr expression = parsePrefixExpression();
+            return new Unary(
+                    expression.position,
+                    expression,
+                    Unary.Operator.NOT
+            );
+
         } else {
             dump("prefix_expression -> postfix_expression");
-            parsePostfixExpression();
+            return parsePostfixExpression();
         }
     }
 
-    private void parsePostfixExpression() {
-        //  TODO: dodelaj
+    private Expr parsePostfixExpression() {
         dump("postfix_expression -> atom_expression postfix_expression1");
-        parseAtomExpression();
-        parsePostfixExpression1();
+        Expr leftExpression = parseAtomExpression();
+        return parsePostfixExpression1(leftExpression);
     }
 
-    private void parsePostfixExpression1() {
-        //  TODO: dodelaj
+    private Expr parsePostfixExpression1(Expr leftExpression) {
         if (check(OP_LBRACKET)) {
             dump("postfix_expression1 -> \"[\" expression \"]\" postfix_expression1");
             skip();
 
-            parseExpression();
+            Expr rightExpression = parseExpression();
 
-            if (check(OP_RBRACKET))
-                skip();
-            else {
+            if (!check(OP_RBRACKET))
                 Report.error(getSymbol().position, "PINS error: ']' expected");
-            }
+            skip();
 
-            parsePostfixExpression1();
+            return parsePostfixExpression1(rightExpression);
         } else {
             dump("postfix_expression1 -> epsylon");
+            return leftExpression;
         }
     }
 
     private Expr parseAtomExpression() {
-        //  TODO: dodelaj
         if (check(C_LOGICAL)) {
             dump("atom_expression -> log_constant");
             Symbol atmExprLogical = skip();
@@ -386,7 +479,6 @@ public class Parser {
             );
 
         } else if (check(IDENTIFIER)) {
-            // TODO: dodelaj
             dump("atom_expression -> identifier identifier1");
             Symbol identifier = skip();
             return parseIdentifier1(identifier);
@@ -421,7 +513,6 @@ public class Parser {
     }
 
     private Expr parseIdentifier1(Symbol identifier) {
-        //  TODO: dodelaj
         if (check(OP_LPARENT)) {
             dump("identifier1 -> \"(\" expressions \")\"");
             skip();
@@ -633,7 +724,7 @@ public class Parser {
         Type parType = parseType();
 
         return new FunDef.Parameter(
-                new Position(parType.position.start, parType.position.end),
+                new Position(parIdentifier.position.start, parType.position.end),
                 parIdentifier.lexeme,
                 parType
         );

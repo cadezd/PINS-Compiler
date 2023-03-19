@@ -1,4 +1,11 @@
-var x : integer;
-var y : string
-var z: logical;
-typ MyInt: integer
+fun bubblesort(tab:arr[13] integer) : integer = (
+    {for i = 0, 13, 1:
+        {for j = 0, 13, 1:
+            (
+            {tmp = tab[j]},
+            {tab[j] = tab[i]},
+            {tab[i] = tmp}, 0
+            ) {where var tmp : integer}
+        }
+    }, 1
+) {where var i : integer; var j : integer}
