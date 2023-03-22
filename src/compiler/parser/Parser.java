@@ -148,7 +148,6 @@ public class Parser {
     }
 
     private Expr parseExpression1(Expr leftExpression) {
-        //  TODO: dodelaj
         if (check(OP_LBRACE)) {
             dump("expression1 -> \"{\" WHERE definitions \"}\"");
             skip();
@@ -161,10 +160,10 @@ public class Parser {
 
             if (!check(OP_RBRACE))
                 Report.error(getSymbol().position, "PINS error: '}' expected");
-            skip();
+            Symbol endSymbol = skip();
 
             return new Where(
-                    new Position(leftExpression.position.start, definitions.position.end),
+                    new Position(leftExpression.position.start, endSymbol.position.end),
                     leftExpression,
                     definitions
             );
@@ -304,7 +303,6 @@ public class Parser {
     }
 
     private Expr parseAdditiveExpression() {
-
         dump("additive_expression -> multiplicative_expression additive_expression1");
         Expr leftExpression = parseMultiplicativeExpression();
         return parseAdditiveExpression1(leftExpression);
@@ -325,6 +323,7 @@ public class Parser {
             return parseAdditiveExpression1(binary);
         } else if (check(OP_SUB)) {
             dump("additive_expression1 -> \"-\" additive_expression");
+            skip();
             Expr rightExpression = parseMultiplicativeExpression();
             Expr binary = new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
@@ -392,30 +391,30 @@ public class Parser {
     private Expr parsePrefixExpression() {
         if (check(OP_ADD)) {
             dump("prefix_expression -> \"+\" prefix_expression");
-            skip();
+            Symbol startSymbol = skip();
             Expr expression = parsePrefixExpression();
             return new Unary(
-                    expression.position,
+                    new Position(startSymbol.position.start, expression.position.end),
                     expression,
                     Unary.Operator.ADD
             );
 
         } else if (check(OP_SUB)) {
             dump("prefix_expression -> \"-\" prefix_expression");
-            skip();
+            Symbol startSymbol = skip();
             Expr expression = parsePrefixExpression();
             return new Unary(
-                    expression.position,
+                    new Position(startSymbol.position.start, expression.position.end),
                     expression,
                     Unary.Operator.SUB
             );
 
         } else if (check(OP_NOT)) {
             dump("prefix_expression -> \"!\" prefix_expression");
-            skip();
+            Symbol startSymbol = skip();
             Expr expression = parsePrefixExpression();
             return new Unary(
-                    expression.position,
+                    new Position(startSymbol.position.start, expression.position.end),
                     expression,
                     Unary.Operator.NOT
             );
@@ -435,15 +434,23 @@ public class Parser {
     private Expr parsePostfixExpression1(Expr leftExpression) {
         if (check(OP_LBRACKET)) {
             dump("postfix_expression1 -> \"[\" expression \"]\" postfix_expression1");
-            skip();
+            Symbol startSymbol = skip();
 
             Expr rightExpression = parseExpression();
 
             if (!check(OP_RBRACKET))
                 Report.error(getSymbol().position, "PINS error: ']' expected");
-            skip();
+            Symbol endSymbol = skip();
 
-            return parsePostfixExpression1(rightExpression);
+            Binary binary = new Binary(
+                    new Position(startSymbol.position.start, endSymbol.position.end),
+                    leftExpression,
+                    Binary.Operator.ARR,
+                    rightExpression
+            );
+
+            return parsePostfixExpression1(binary);
+
         } else {
             dump("postfix_expression1 -> epsylon");
             return leftExpression;
@@ -485,27 +492,25 @@ public class Parser {
 
         } else if (check(OP_LPARENT)) {
             dump("atom_expression -> \"(\" expressions \")\"");
-            skip();
+            Symbol startSymbol = skip();
 
-            Block exppressions = parseExpressions();
+            List<Expr> exppressions = parseExpressions();
 
             if (!check(OP_RPARENT))
                 Report.error(getSymbol().position, "PINS error: ')' expected");
-            skip();
+            Symbol endSymbol = skip();
 
-            return exppressions;
+            return new Block(
+                    new Position(startSymbol.position.start, endSymbol.position.end),
+                    exppressions
+            );
 
         } else if (check(OP_LBRACE)) {
-            dump("atom_expression -> \"{\" other_atom_expressions \"}\"");
-            skip();
+            dump("atom_expression -> \"{\" other_atom_expressions");
+            Symbol startSymbol = skip();
 
-            Expr otherAtomExpressions = parseOtherAtomExpressions();
+            return parseOtherAtomExpressions(startSymbol);
 
-            if (!check(OP_RBRACE))
-                Report.error(getSymbol().position, "PINS error: '}' expected");
-            skip();
-
-            return otherAtomExpressions;
         } else {
             Report.error(getSymbol().position, "PINS error: not a statement");
             return null;
@@ -517,7 +522,7 @@ public class Parser {
             dump("identifier1 -> \"(\" expressions \")\"");
             skip();
 
-            Block expressions = parseExpressions();
+            List<Expr> expressions = parseExpressions();
 
             if (!check(OP_RPARENT))
                 Report.error(getSymbol().position, "PINS error: ')' expected");
@@ -525,7 +530,7 @@ public class Parser {
 
             return new Call(
                     new Position(identifier.position.start, endSymbol.position.end),
-                    expressions.expressions,
+                    expressions,
                     identifier.lexeme
             );
         } else {
@@ -537,25 +542,25 @@ public class Parser {
         }
     }
 
-    private Expr parseOtherAtomExpressions() {
+    private Expr parseOtherAtomExpressions(Symbol startSymbol) {
         if (check(KW_IF)) {
             dump("other_atom_expressions -> if_else_expression if_then_else_expression");
-            Symbol ifSymbol = skip();
-            IfThenElse ifThen = parseIfElseExpression(ifSymbol);
+            skip();
+            IfThenElse ifThen = parseIfElseExpression(startSymbol);
             return parseIfThenElseExpression(ifThen);
 
         } else if (check(KW_WHILE)) {
             dump("other_atom_expressions ->  while_expression ");
-            Symbol whileSymbol = skip();
-            return parseWhileExpression(whileSymbol);
+            skip();
+            return parseWhileExpression(startSymbol);
 
         } else if (check(KW_FOR)) {
             dump("other_atom_expressions -> for_expression");
-            Symbol forSymbol = skip();
-            return parseForExpression(forSymbol);
+            skip();
+            return parseForExpression(startSymbol);
 
         } else {
-            dump("other_atom_expressions -> expression \"=\" expression");
+            dump("other_atom_expressions -> expression \"=\" expression \"}\"");
             Expr leftExpression = parseExpression();
 
             if (!check(OP_ASSIGN))
@@ -564,8 +569,12 @@ public class Parser {
 
             Expr rightExpression = parseExpression();
 
+            if (!check(OP_RBRACE))
+                Report.error(getSymbol().position, "PINS error: '}' expected");
+            Symbol endSymbol = skip();
+
             return new Binary(
-                    new Position(leftExpression.position.start, rightExpression.position.end),
+                    new Position(startSymbol.position.start, endSymbol.position.end),
                     leftExpression,
                     Binary.Operator.ASSIGN,
                     rightExpression
@@ -591,23 +600,37 @@ public class Parser {
 
     private Expr parseIfThenElseExpression(IfThenElse ifThen) {
         if (check(KW_ELSE)) {
-            dump("if_then_else_expression -> else expression");
+            dump("if_then_else_expression -> else expression \"}\"");
             skip();
             Expr elseExpression = parseExpression();
+
+            if (!check(OP_RBRACE))
+                Report.error(getSymbol().position, "PINS error: '}' expected");
+            Symbol endSymbol = skip();
+
             return new IfThenElse(
-                    new Position(ifThen.position.start, elseExpression.position.end),
+                    new Position(ifThen.position.start, endSymbol.position.end),
                     ifThen.condition,
                     ifThen.thenExpression,
-                    ifThen.elseExpression
+                    elseExpression
             );
         } else {
-            dump("if_then_else_expression -> epsylon");
-            return ifThen;
+            dump("if_then_else_expression -> epsylon \"}\"");
+
+            if (!check(OP_RBRACE))
+                Report.error(getSymbol().position, "PINS error: '}' expected");
+            Symbol endSymbol = skip();
+
+            return new IfThenElse(
+                    new Position(ifThen.position.start, endSymbol.position.end),
+                    ifThen.condition,
+                    ifThen.thenExpression
+            );
         }
     }
 
     private Expr parseWhileExpression(Symbol startSymbol) {
-        dump("while_expression -> while expression \":\" expression");
+        dump("while_expression -> while expression \":\" expression \"}\"");
 
         Expr condition = parseExpression();
 
@@ -617,15 +640,19 @@ public class Parser {
 
         Expr body = parseExpression();
 
+        if (!check(OP_RBRACE))
+            Report.error(getSymbol().position, "PINS error: '}' expected");
+        Symbol endSymbol = skip();
+
         return new While(
-                new Position(startSymbol.position.start, body.position.end),
+                new Position(startSymbol.position.start, endSymbol.position.end),
                 condition,
                 body
         );
     }
 
     private Expr parseForExpression(Symbol startSymbol) {
-        dump("for_expression ->  for identifier \"=\" expression \",\" expression \",\" expression \":\" expression");
+        dump("for_expression ->  for identifier \"=\" expression \",\" expression \",\" expression \":\" expression \"}\"");
 
         if (!check(IDENTIFIER))
             Report.error(getSymbol().position, "PINS error: <identifier> expected");
@@ -655,8 +682,12 @@ public class Parser {
 
         Expr body = parseExpression();
 
+        if (!check(OP_RBRACE))
+            Report.error(getSymbol().position, "PINS error: '}' expected");
+        Symbol endSymbol = skip();
+
         return new For(
-                new Position(startSymbol.position.start, body.position.end),
+                new Position(startSymbol.position.start, endSymbol.position.end),
                 new Name(forIdentifier.position, forIdentifier.lexeme),
                 low,
                 high,
@@ -666,18 +697,13 @@ public class Parser {
     }
 
 
-    private Block parseExpressions() {
+    private List<Expr> parseExpressions() {
         dump("expressions -> expression expressions1 ");
         List<Expr> expressions = new ArrayList<>();
         expressions.add(parseExpression());
         parseExpressions1(expressions);
 
-        Position.Location start = expressions.get(0).position.start;
-        Position.Location end = expressions.get(expressions.size() - 1).position.end;
-        return new Block(
-                new Position(start, end),
-                expressions
-        );
+        return expressions;
     }
 
     private void parseExpressions1(List<Expr> expressions) {
