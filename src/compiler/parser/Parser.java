@@ -434,7 +434,7 @@ public class Parser {
     private Expr parsePostfixExpression1(Expr leftExpression) {
         if (check(OP_LBRACKET)) {
             dump("postfix_expression1 -> \"[\" expression \"]\" postfix_expression1");
-            Symbol startSymbol = skip();
+            skip();
 
             Expr rightExpression = parseExpression();
 
@@ -443,7 +443,7 @@ public class Parser {
             Symbol endSymbol = skip();
 
             Binary binary = new Binary(
-                    new Position(startSymbol.position.start, endSymbol.position.end),
+                    new Position(leftExpression.position.start, endSymbol.position.end),
                     leftExpression,
                     Binary.Operator.ARR,
                     rightExpression
