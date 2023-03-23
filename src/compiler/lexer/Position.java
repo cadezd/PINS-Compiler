@@ -5,7 +5,7 @@
 
 package compiler.lexer;
 
-import static compiler.common.RequireNonNull.requireNonNull;
+import static common.RequireNonNull.requireNonNull;
 
 public class Position {
     /**

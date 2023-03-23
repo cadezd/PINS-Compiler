@@ -3,7 +3,7 @@
  * @Description: Razred, namenjen obveščanju o poteku prevajanja.
  */
 
-package compiler.common;
+package common;
 
 import java.io.PrintStream;
 

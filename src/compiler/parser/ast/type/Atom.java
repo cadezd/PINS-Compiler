@@ -5,7 +5,7 @@
 
 package compiler.parser.ast.type;
 
-import static compiler.common.RequireNonNull.requireNonNull;
+import static common.RequireNonNull.requireNonNull;
 
 import compiler.common.Visitor;
 import compiler.lexer.Position;

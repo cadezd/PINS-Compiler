@@ -5,7 +5,7 @@
 
 package compiler.parser.ast.expr;
 
-import static compiler.common.RequireNonNull.requireNonNull;
+import static common.RequireNonNull.requireNonNull;
 
 import compiler.common.Visitor;
 import compiler.lexer.Position;
@@ -36,7 +36,9 @@ public class Binary extends Expr {
         this.right = right;
     }
 
-	@Override public void accept(Visitor visitor) { visitor.visit(this); }
+	@Override public void accept(Visitor visitor) { 
+        visitor.visit(this); 
+    }
 
     public static enum Operator {
         ADD,       // +

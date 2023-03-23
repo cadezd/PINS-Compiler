@@ -5,13 +5,15 @@
 
 package compiler.common;
 
-import static compiler.common.StringUtil.*;
-import static compiler.common.RequireNonNull.requireNonNull;
+import static common.StringUtil.*;
+import static common.RequireNonNull.requireNonNull;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import compiler.common.VoidOperator;
+import common.VoidOperator;
 import compiler.parser.ast.*;
 import compiler.parser.ast.def.*;
 import compiler.parser.ast.expr.*;
@@ -58,6 +60,12 @@ public class PrettyPrintVisitor1 implements Visitor {
         requireNonNull(stream);
         this.increaseIndentBy = 4;
         this.stream = stream;
+
+        var xs = new ArrayList<Integer>();
+        xs.stream()
+            .map(t -> t * 2)
+            .filter(t -> t % 2 != 0)
+            .collect(Collectors.toList());
     }
 
     /**

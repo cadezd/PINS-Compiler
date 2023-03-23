@@ -17,7 +17,7 @@ public abstract class Ast {
 	/**
 	 * Ustvari novo vozlišče.
 	 * 
-	 * @param position Lokacija.
+	 * @param pos Lokacija.
 	 */
 	public Ast(Position position) {
 		this.position = position;

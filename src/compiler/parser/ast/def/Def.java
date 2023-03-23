@@ -6,7 +6,7 @@
 
 package compiler.parser.ast.def;
 
-import static compiler.common.RequireNonNull.requireNonNull;
+import static common.RequireNonNull.requireNonNull;
 
 import compiler.lexer.Position;
 import compiler.parser.ast.Ast;

@@ -5,7 +5,7 @@
 
 package compiler.parser;
 
-import compiler.common.Report;
+import common.Report;
 import compiler.lexer.Position;
 import compiler.lexer.Symbol;
 import compiler.lexer.TokenType;
@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static compiler.common.RequireNonNull.requireNonNull;
+import static common.RequireNonNull.requireNonNull;
 import static compiler.lexer.TokenType.*;
 
 public class Parser {

@@ -3,7 +3,7 @@
  * @ Description:
  */
 
-package compiler.common;
+package common;
 
 public interface VoidOperator {
     void apply();

@@ -3,9 +3,9 @@
  * @ Description:
  */
 
-package compiler.common;
+package common;
 
-import static compiler.common.RequireNonNull.requireNonNull;
+import static common.RequireNonNull.requireNonNull;
 
 public class StringUtil {
     /**

@@ -3,7 +3,7 @@
  * @ Description:
  */
 
-package compiler.common;
+package common;
 
 import java.util.Objects;
 

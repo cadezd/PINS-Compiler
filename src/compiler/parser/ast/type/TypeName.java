@@ -5,7 +5,7 @@
 
 package compiler.parser.ast.type;
 
-import static compiler.common.RequireNonNull.requireNonNull;
+import static common.RequireNonNull.requireNonNull;
 
 import compiler.common.Visitor;
 import compiler.lexer.Position;
@@ -22,8 +22,5 @@ public class TypeName extends Type {
         this.identifier = identifier;
     }
 
-    @Override
-    public void accept(Visitor visitor) {
-        visitor.visit(this);
-    }
+	@Override public void accept(Visitor visitor) { visitor.visit(this); }
 }
