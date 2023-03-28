@@ -47,10 +47,14 @@ public class NameChecker implements Visitor {
     public void visit(Call call) {
         // povezemo klic funkcije z definicijo
         Optional<Def> link = symbolTable.definitionFor(call.name);
-        if (link.isPresent())
-            definitions.store(link.get(), call);
-        else
+
+        if (!link.isPresent())
             Report.error(call.position, "PINS error: function " + call.name + " is not defined");
+
+        if (!(link.get() instanceof FunDef))
+            Report.error(call.position, "PINS error: " + call.name + " is not a function");
+
+        definitions.store(link.get(), call);
 
         // obdelamo argumente funkcije
         for (Expr arg : call.arguments)
@@ -59,6 +63,18 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Binary binary) {
+        if (binary.operator.equals(Binary.Operator.ARR) && binary.left instanceof Name name) {
+            Optional<Def> link = symbolTable.definitionFor(name.name);
+
+            if (!link.isPresent())
+                Report.error(name.position, "PINS error: array " + name.name + " is not defined");
+
+            if (!(link.get() instanceof VarDef varDef && varDef.type instanceof Array || link.get() instanceof Parameter parDef && parDef.type instanceof Array))
+                Report.error(name.position, "PINS error: " + name.name + " is not an array");
+
+            definitions.store(link.get(), name);
+        }
+
         // obdelamo levi del
         visitExpr(binary.left);
 
@@ -87,10 +103,11 @@ public class NameChecker implements Visitor {
     public void visit(Name name) {
         // povezemo ime spremenljivke z njeno definicijo
         Optional<Def> link = symbolTable.definitionFor(name.name);
-        if (link.isPresent())
-            definitions.store(link.get(), name);
-        else
+
+        if (!link.isPresent())
             Report.error(name.position, "PINS error: variable " + name.name + " is not defined");
+
+        definitions.store(link.get(), name);
     }
 
     @Override
@@ -125,11 +142,9 @@ public class NameChecker implements Visitor {
     @Override
     public void visit(Where where) {
         symbolTable.pushScope(); // nov notranji scope
-        // obdelamo definicije
-        visit(where.defs);
-        // obdelamo izraze
-        visitExpr(where.expr);
-        symbolTable.popScope(); // nazaj v prejsnji scoper
+        visit(where.defs); // obdelamo definicije
+        visitExpr(where.expr); // obdelamo izraze
+        symbolTable.popScope(); // nazaj v prejsnji scope
     }
 
     @Override
@@ -159,35 +174,37 @@ public class NameChecker implements Visitor {
             } else if (definition instanceof TypeDef typeDef) { // poveze tip z njegovo definicijo
                 visit(typeDef);
 
-            } else if (definition instanceof FunDef funDef) { // poveze funkcijo z njeno definicijo (edina definicija, ki gre en nivo nižje)
+            } else if (definition instanceof FunDef funDef) { // poveze funkcijo z njeno definicijo
+
+                for (Parameter parameter : funDef.parameters) { // povežemo tipe parametrov z definicijami
+                    visit(parameter);
+                }
+
+                if (funDef.type instanceof TypeName funType) { // povežemo return tip z definicijo
+                    Optional<Def> link = symbolTable.definitionFor(funType.identifier);
+
+                    if (!link.isPresent())
+                        Report.error(funType.position, "PINS error: type " + funType.identifier + " is not defined");
+
+                    if (!(link.get() instanceof TypeDef))
+                        Report.error(funType.position, "PINS error: " + funType.identifier + " is not a type");
+
+                    definitions.store(link.get(), funDef.type);
+                }
+
+                // dodamo definicije parametrov in obdelamo telo funkcije
                 symbolTable.pushScope();
                 visit(funDef);
                 symbolTable.popScope();
-
             }
         }
     }
 
     @Override
     public void visit(FunDef funDef) {
-
-        // BFS (dodamo vse definicije v tabelo)
+        // dodamo vse definicije parametrov v simbolno tabelo
         for (Parameter parameter : funDef.parameters) { // dodaj definicijo parametra
             addToSymbolTable(parameter, "PINS error: parameter " + parameter.name + " is already defined");
-        }
-
-        // DFS : povežemo parametre z definicijami tipov
-        for (Parameter parameter : funDef.parameters) { // dodaj definicijo parametra
-            this.visit(parameter);
-        }
-
-
-        if (funDef.type instanceof TypeName funType) { // ce je return type nek custom type povezi z njegovo definicijo
-            Optional<Def> link = symbolTable.definitionFor(funType.identifier);
-            if (link.isPresent())
-                definitions.store(link.get(), funDef.type);
-            else
-                Report.error(funType.position, "PINS error: type " + funType.identifier + " is not defined");
         }
 
         // obdelamo telo funkcije
@@ -198,10 +215,14 @@ public class NameChecker implements Visitor {
     public void visit(TypeDef typeDef) {
         if (typeDef.type instanceof TypeName typeType) { // ce je type nekega custom typa ga povezi z definicijo
             Optional<Def> link = symbolTable.definitionFor(typeType.identifier);
-            if (link.isPresent())
-                definitions.store(link.get(), typeType);
-            else
+
+            if (!link.isPresent())
                 Report.error(typeType.position, "PINS error: type " + typeType.identifier + " is not defined");
+
+            if (!(link.get() instanceof TypeDef))
+                Report.error(typeType.position, "PINS error: " + typeType.identifier + " is not a type");
+
+            definitions.store(link.get(), typeType);
         }
     }
 
@@ -209,10 +230,14 @@ public class NameChecker implements Visitor {
     public void visit(VarDef varDef) {
         if (varDef.type instanceof TypeName varType) { // ce je spremenljivka nekega custom typa ga povezi z definicijo
             Optional<Def> link = symbolTable.definitionFor(varType.identifier);
-            if (link.isPresent())
-                definitions.store(link.get(), varType);
-            else
+
+            if (!link.isPresent())
                 Report.error(varType.position, "PINS error: type " + varType.identifier + " is not defined");
+
+            if (!(link.get() instanceof TypeDef))
+                Report.error(varType.position, "PINS error: " + varType.identifier + " is not a type");
+
+            definitions.store(link.get(), varType);
         }
     }
 
@@ -220,10 +245,14 @@ public class NameChecker implements Visitor {
     public void visit(Parameter parameter) {
         if (parameter.type instanceof TypeName parType) { // ce je parameter nekega custom typa ga povezi z definicijo
             Optional<Def> link = symbolTable.definitionFor(parType.identifier);
-            if (link.isPresent())
-                definitions.store(link.get(), parType);
-            else
+
+            if (!link.isPresent())
                 Report.error(parType.position, "PINS error: type " + parType.identifier + " is not defined");
+
+            if (!(link.get() instanceof TypeDef))
+                Report.error(parType.position, "PINS error: " + parType.identifier + " is not a type");
+
+            definitions.store(link.get(), parType);
         }
     }
 

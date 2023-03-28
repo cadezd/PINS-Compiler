@@ -851,6 +851,7 @@ public class Parser {
         return this.symbols.get(0).tokenType.equals(type);
     }
 
+    // TODO: dodaj previous symbol za errorje pri ';' in ','
     private Symbol skip() {
         return this.symbols.remove(0);
     }
