@@ -1,5 +1,3 @@
-typ x : integer;
+typ bala : integer;
 
-fun main(a : x) : x = (
-    {a = a + 1}
-) {where var a : x}
+fun main(y: arr[10] arr[10] bala): integer = y[1][2]
