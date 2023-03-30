@@ -1,3 +1,2 @@
-typ bala : integer;
-
-fun main(y: arr[10] arr[10] bala): integer = y[1][2]
+fun f(x:integer):integer= 42;
+fun g(x:integer):integer= f
