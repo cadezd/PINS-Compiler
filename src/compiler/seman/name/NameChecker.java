@@ -107,6 +107,8 @@ public class NameChecker implements Visitor {
             Report.error(name.position, "PINS error: variable " + name.name + " is not defined");
         else if (link.get() instanceof FunDef)
             Report.error(name.position, "PINS error: " + name.name + " is a function");
+        else if (link.get() instanceof TypeDef)
+            Report.error(name.position, "PINS error: " + name.name + " is a type");
         else
             definitions.store(link.get(), name);
     }
