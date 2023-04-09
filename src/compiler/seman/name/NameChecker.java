@@ -199,7 +199,6 @@ public class NameChecker implements Visitor {
         for (Parameter parameter : funDef.parameters)
             addToSymbolTable(parameter, "PINS error: parameter " + parameter.name + " is already defined");
 
-
         // visiting function body
         navigate(funDef.body);
     }
