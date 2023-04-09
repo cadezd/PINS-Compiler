@@ -11,8 +11,7 @@ import java.util.Optional;
 
 import cli.PINS;
 import cli.PINS.Phase;
-import compiler.common.PrettyPrintVisitor1;
-import compiler.common.PrettyPrintVisitor2;
+import compiler.common.PrettyPrintVisitor3;
 import compiler.lexer.Lexer;
 import compiler.parser.Parser;
 import compiler.parser.ast.def.Def;
@@ -20,11 +19,13 @@ import compiler.seman.common.NodeDescription;
 import compiler.seman.name.NameChecker;
 import compiler.seman.name.env.FastSymbolTable;
 import compiler.seman.name.env.SymbolTable;
+import compiler.seman.type.TypeChecker;
+import compiler.seman.type.type.Type;
 
 public class Main {
     /**
      * Metoda, ki izvede celotni proces prevajanja.
-     *
+     * 
      * @param args parametri ukazne vrstice.
      */
     public static void main(String[] args) throws Exception {
@@ -57,7 +58,7 @@ public class Main {
         /**
          * Izvedi sintaksno analizo.
          */
-        Optional<PrintStream> out = cli.dumpPhases.contains(Phase.SYN)
+        Optional<PrintStream> out = cli.dumpPhases.contains(Phase.SYN) 
                 ? Optional.of(System.out)
                 : Optional.empty();
         var parser = new Parser(symbols, out);
@@ -68,7 +69,7 @@ public class Main {
         /**
          * Abstraktna sintaksa.
          */
-        var prettyPrint = new PrettyPrintVisitor2(2, System.out);
+        var prettyPrint = new PrettyPrintVisitor3(2, System.out);
         if (cli.dumpPhases.contains(Phase.AST)) {
             ast.accept(prettyPrint);
         }
@@ -87,6 +88,21 @@ public class Main {
             ast.accept(prettyPrint);
         }
         if (cli.execPhase == Phase.NAME) {
+            return;
+        }
+        /**
+         * Izvedi preverjanje tipov.
+         */
+        var types = new NodeDescription<Type>();
+        var typeChecker = new TypeChecker(definitions, types);
+        ast.accept(typeChecker);
+        
+        if (cli.dumpPhases.contains(Phase.TYP)) {
+            prettyPrint.definitions = Optional.of(definitions);
+            prettyPrint.types = Optional.of(types);
+            ast.accept(prettyPrint);
+        }
+        if (cli.execPhase == Phase.TYP) {
             return;
         }
     }
