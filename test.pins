@@ -1,3 +1,1 @@
-typ x: integer;
-
-fun f(i: x) : integer = x
+fun f(x: integer, y: logical, z: arr[10] integer) : integer = f(true, 1, '123')

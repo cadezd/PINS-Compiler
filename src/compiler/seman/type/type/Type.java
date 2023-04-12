@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import common.Constants;
+import compiler.parser.ast.expr.Call;
 
 public abstract class Type {
     /**
@@ -21,7 +22,7 @@ public abstract class Type {
 
     /**
      * Vrne velikost tipa, če je le-ta uporabljen kot parameter/argument.
-     * 
+     * <p>
      * V primeru prenosa po referenci, je velikost tipa enaka
      * velikosti kazalca.
      */
@@ -133,16 +134,26 @@ public abstract class Type {
 
         @Override
         public boolean equals(Type t) {
-            throw new RuntimeException("Implementiraj ...");
+            if (t.isAtom()) {
+                Optional<Atom> typ = t.asAtom();
+                if (typ.isPresent())
+                    return this.kind.equals(typ.get().kind);
+            }
+
+            return false;
         }
 
         @Override
         public String toString() {
             return switch (kind) {
-                case INT: yield "int";
-                case STR: yield "str";
-                case LOG: yield "log";
-                case VOID: yield "void";
+                case INT:
+                    yield "int";
+                case STR:
+                    yield "str";
+                case LOG:
+                    yield "log";
+                case VOID:
+                    yield "void";
             };
         }
 
@@ -193,12 +204,18 @@ public abstract class Type {
 
         @Override
         public boolean equals(Type t) {
-            throw new RuntimeException("Implementiraj ...");
+            if (t.isArray()) {
+                Optional<Array> arr = t.asArray();
+                if (arr.isPresent())
+                    return this.type.equals(arr.get().type) && this.size == arr.get().size;
+            }
+
+            return false;
         }
 
         @Override
         public String toString() {
-            return "ARR("+size+","+type.toString()+")";
+            return "ARR(" + size + "," + type.toString() + ")";
         }
     }
 
@@ -210,7 +227,7 @@ public abstract class Type {
          * Tipi parametrov.
          */
         public final List<Type> parameters;
-        
+
         /**
          * Tip, ki ga funkcija vrača.
          */
@@ -235,15 +252,34 @@ public abstract class Type {
 
         @Override
         public boolean equals(Type t) {
-            throw new RuntimeException("Implementiraj ...");
+            if (t.isFunction()) {
+                Optional<Function> fun = t.asFunction();
+                if (fun.isPresent()) {
+                    Function function = fun.get();
+                    if (this.parameters.size() != function.parameters.size())
+                        return false;
+
+                    for (int i = 0; i < this.parameters.size(); i++) {
+                        if (!this.parameters.get(i).equals(function.parameters.get(i)))
+                            return false;
+                    }
+
+                    if (!this.returnType.equals(function.returnType))
+                        return false;
+
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         @Override
         public String toString() {
             var params = parameters.stream()
-                .map(t -> t.toString())
-                .collect(Collectors.joining(", "));
-            return "(" +  params + ") -> " + returnType.toString();
+                    .map(t -> t.toString())
+                    .collect(Collectors.joining(", "));
+            return "(" + params + ") -> " + returnType.toString();
         }
     }
 }

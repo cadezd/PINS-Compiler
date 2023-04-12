@@ -824,7 +824,10 @@ public class Parser {
             skip();
 
             if (!check(C_INTEGER))
-                Report.error(getSymbol().position, "PINS error: array dimension missing");
+                if (check(OP_SUB))
+                    Report.error(getSymbol().position, "PINS error: negative array dimension");
+                else
+                    Report.error(getSymbol().position, "PINS error: array dimension missing");
             Symbol arraySize = skip();
 
             if (!check(OP_RBRACKET))
