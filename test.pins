@@ -1,1 +1,22 @@
-fun f(x: integer, y: logical, z: arr[10] integer) : integer = f(true, 1, '123')
+typ int:integer;
+typ str:string;
+typ bool:logical;
+
+fun preveriArr(array:arr[10]int):arr[2]bool = (
+    {returnValue[0] = true},
+    {returnValue[1] = true},
+
+    {for i = 0, 10, 1: (
+        {if  !returnValue[0] then
+            {returnValue[0] = false}
+        },
+        {if  !returnValue[1] then
+            {returnValue[1] = false}
+        }
+    )},
+
+    returnValue
+) {where
+    var returnValue:arr[2]bool;
+    var i:int
+}
