@@ -242,8 +242,7 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Atom atom) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        return;
     }
 
     @Override
