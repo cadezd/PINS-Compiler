@@ -11,7 +11,10 @@ import java.util.Optional;
 
 import cli.PINS;
 import cli.PINS.Phase;
-import compiler.common.PrettyPrintVisitor3;
+import compiler.common.PrettyPrintVisitor4;
+import compiler.frm.Access;
+import compiler.frm.Frame;
+import compiler.frm.FrameEvaluator;
 import compiler.lexer.Lexer;
 import compiler.parser.Parser;
 import compiler.parser.ast.def.Def;
@@ -69,7 +72,7 @@ public class Main {
         /**
          * Abstraktna sintaksa.
          */
-        var prettyPrint = new PrettyPrintVisitor3(2, System.out);
+        var prettyPrint = new PrettyPrintVisitor4(2, System.out);
         if (cli.dumpPhases.contains(Phase.AST)) {
             ast.accept(prettyPrint);
         }
@@ -96,13 +99,29 @@ public class Main {
         var types = new NodeDescription<Type>();
         var typeChecker = new TypeChecker(definitions, types);
         ast.accept(typeChecker);
-        
         if (cli.dumpPhases.contains(Phase.TYP)) {
             prettyPrint.definitions = Optional.of(definitions);
             prettyPrint.types = Optional.of(types);
             ast.accept(prettyPrint);
         }
         if (cli.execPhase == Phase.TYP) {
+            return;
+        }
+        /**
+         * Izvedi analizo klicnih zapisov in dostopov.
+         */
+        var frames = new NodeDescription<Frame>();
+        var accesses = new NodeDescription<Access>();
+        var frameEvaluator = new FrameEvaluator(frames, accesses, definitions, types);
+        ast.accept(frameEvaluator);
+        if (cli.dumpPhases.contains(Phase.FRM)) {
+            prettyPrint.definitions = Optional.of(definitions);
+            prettyPrint.types = Optional.of(types);
+            prettyPrint.frames = Optional.of(frames);
+            prettyPrint.accesses = Optional.of(accesses);
+            ast.accept(prettyPrint);
+        }
+        if (cli.execPhase == Phase.FRM) {
             return;
         }
     }
