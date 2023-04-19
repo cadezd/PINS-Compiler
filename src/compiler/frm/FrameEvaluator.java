@@ -5,8 +5,7 @@
 
 package compiler.frm;
 
-import static common.RequireNonNull.requireNonNull;
-
+import common.Constants;
 import compiler.common.Visitor;
 import compiler.parser.ast.def.*;
 import compiler.parser.ast.def.FunDef.Parameter;
@@ -16,6 +15,11 @@ import compiler.parser.ast.type.Atom;
 import compiler.parser.ast.type.TypeName;
 import compiler.seman.common.NodeDescription;
 import compiler.seman.type.type.Type;
+
+import java.util.Optional;
+import java.util.Stack;
+
+import static common.RequireNonNull.requireNonNull;
 
 public class FrameEvaluator implements Visitor {
     /**
@@ -38,11 +42,21 @@ public class FrameEvaluator implements Visitor {
      */
     private final NodeDescription<Type> types;
 
+    /**
+     * Stack Builderjev
+     */
+    private Stack<Frame.Builder> builders = new Stack<>();
+
+    /**
+     * Trenutni static leve
+     */
+    private int staticLevel = 0;
+
     public FrameEvaluator(
-        NodeDescription<Frame> frames, 
-        NodeDescription<Access> accesses,
-        NodeDescription<Def> definitions,
-        NodeDescription<Type> types
+            NodeDescription<Frame> frames,
+            NodeDescription<Access> accesses,
+            NodeDescription<Def> definitions,
+            NodeDescription<Type> types
     ) {
         requireNonNull(frames, accesses, definitions, types);
         this.frames = frames;
@@ -53,126 +67,187 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(Call call) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        System.out.println(call);
+        int size = 0;
+        Optional<Type> argumentType;
+        for (Expr argument : call.arguments) {
+            argumentType = types.valueFor(argument);
+            if (argumentType.isEmpty())
+                continue;
+
+            size += argumentType.get().sizeInBytes();
+        }
+        size += Constants.WordSize; // static link
+
+        Frame.Builder builder = builders.pop();
+        builder.addFunctionCall(size);
+        builders.push(builder);
+        // TODO: obdelaj fun body (nsisem lih preprican)
+        // TODO: isto kot pri funkciji (mby)
+
     }
 
 
     @Override
     public void visit(Binary binary) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        binary.left.accept(this);
+        binary.right.accept(this);
     }
 
 
     @Override
     public void visit(Block block) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        for (Expr expression : block.expressions)
+            expression.accept(this);
     }
 
 
     @Override
     public void visit(For forLoop) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        forLoop.counter.accept(this);
+        forLoop.low.accept(this);
+        forLoop.high.accept(this);
+        forLoop.step.accept(this);
+        forLoop.body.accept(this);
     }
 
 
     @Override
     public void visit(Name name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
     }
 
 
     @Override
     public void visit(IfThenElse ifThenElse) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        ifThenElse.condition.accept(this);
+        ifThenElse.thenExpression.accept(this);
+
+        if (ifThenElse.elseExpression.isEmpty())
+            return;
+
+        ifThenElse.elseExpression.get().accept(this);
     }
 
 
     @Override
     public void visit(Literal literal) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
     }
 
 
     @Override
     public void visit(Unary unary) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        unary.expr.accept(this);
     }
 
 
     @Override
     public void visit(While whileLoop) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        whileLoop.condition.accept(this);
+        whileLoop.body.accept(this);
     }
 
 
     @Override
     public void visit(Where where) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        // TODO: se mi zdi da more bit tako k where ni del funDef.body
+        staticLevel++;
+        where.defs.accept(this);
+        where.expr.accept(this);
+        staticLevel--;
     }
 
 
     @Override
     public void visit(Defs defs) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        for (Def definition : defs.definitions)
+            definition.accept(this);
     }
 
 
     @Override
     public void visit(FunDef funDef) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        staticLevel++;
+
+        // naredimo builderja in ga damo na sklad
+        Frame.Builder builder;
+        if (staticLevel <= 1)
+            builder = new Frame.Builder(Frame.Label.named(funDef.name), staticLevel);
+        else {
+            builder = new Frame.Builder(Frame.Label.nextAnonymous(), staticLevel);
+            builder.addParameter(Constants.WordSize); // old FP
+        }
+        builders.push(builder);
+
+        for (Parameter parameter : funDef.parameters)
+            parameter.accept(this);
+
+
+        funDef.body.accept(this);
+
+        frames.store(builder.build(), funDef);
+
+        staticLevel--;
     }
 
 
     @Override
     public void visit(TypeDef typeDef) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
     }
 
 
     @Override
     public void visit(VarDef varDef) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        Optional<Type> type = types.valueFor(varDef.type);
+        if (type.isEmpty())
+            return;
+
+        int size = type.get().sizeInBytes();
+
+        if (staticLevel <= 1) {
+            String name = varDef.name;
+            accesses.store(
+                    new Access.Global(size, Frame.Label.named(name)),
+                    varDef
+            );
+            return;
+        }
+
+        Frame.Builder builder = builders.pop();
+        accesses.store(
+                new Access.Local(size, builder.addLocalVariable(size), staticLevel),
+                varDef
+        );
+        builders.push(builder);
     }
 
 
     @Override
     public void visit(Parameter parameter) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
+        Optional<Type> type = types.valueFor(parameter.type);
+        if (type.isEmpty())
+            return;
+
+        int size = type.get().sizeInBytesAsParam();
+        Frame.Builder builder = builders.pop();
+        accesses.store(
+                new Access.Parameter(size, builder.addParameter(size), staticLevel),
+                parameter
+        );
+        builders.push(builder);
     }
 
 
     @Override
     public void visit(Array array) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
     }
 
 
     @Override
     public void visit(Atom atom) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
     }
 
 
     @Override
     public void visit(TypeName name) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'visit'");
     }
 }

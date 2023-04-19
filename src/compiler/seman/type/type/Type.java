@@ -12,6 +12,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import common.Constants;
+import compiler.frm.Access;
+import compiler.parser.ast.def.FunDef;
 import compiler.parser.ast.expr.Call;
 
 public abstract class Type {
@@ -124,12 +126,12 @@ public abstract class Type {
 
         @Override
         public int sizeInBytes() {
-            throw new RuntimeException("Implementiraj ...");
+            return Constants.WordSize;
         }
 
         @Override
         public int sizeInBytesAsParam() {
-            throw new RuntimeException("Implementiraj ...");
+            return Constants.WordSize;
         }
 
         @Override
@@ -190,12 +192,12 @@ public abstract class Type {
 
         @Override
         public int sizeInBytes() {
-            throw new RuntimeException("Implementiraj ...");
+            return size * type.sizeInBytes();
         }
 
         @Override
         public int sizeInBytesAsParam() {
-            throw new RuntimeException("Implementiraj ...");
+            return Constants.WordSize;
         }
 
         public int elementSizeInBytes() {
@@ -242,12 +244,16 @@ public abstract class Type {
 
         @Override
         public int sizeInBytes() {
-            throw new RuntimeException("Implementiraj ...");
+            int size = 0;
+            for (Type parameter : parameters)
+                size += parameter.sizeInBytesAsParam();
+
+            return size;
         }
 
         @Override
         public int sizeInBytesAsParam() {
-            throw new RuntimeException("Implementiraj ...");
+            return Constants.WordSize;
         }
 
         @Override
