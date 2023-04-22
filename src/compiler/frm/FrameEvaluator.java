@@ -73,7 +73,7 @@ public class FrameEvaluator implements Visitor {
             argumentType = types.valueFor(argument);
             if (argumentType.isEmpty())
                 continue;
-            size += argumentType.get().sizeInBytes();
+            size += argumentType.get().sizeInBytesAsParam();
         }
         size += Constants.WordSize; // static link
 

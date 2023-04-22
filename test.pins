@@ -1,4 +1,1 @@
-typ x: arr[10] integer;
-var y: x;
-
-fun f(t: arr[10] integer) : x = t
+fun f(x: integer) : integer = 1
