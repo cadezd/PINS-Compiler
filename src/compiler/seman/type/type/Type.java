@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import common.Constants;
+import common.Report;
 import compiler.frm.Access;
 import compiler.parser.ast.def.FunDef;
 import compiler.parser.ast.expr.Call;
@@ -253,7 +254,8 @@ public abstract class Type {
 
         @Override
         public int sizeInBytesAsParam() {
-            return Constants.WordSize;
+            // Function cannot be passed as parameter
+            return 0;
         }
 
         @Override

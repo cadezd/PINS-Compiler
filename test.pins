@@ -1,15 +1,4 @@
-fun f(x: integer) : integer = (
-    {r = g(1) + h(1,2,3)}
-){where var r: integer; var c: integer};
+typ x: arr[10] integer;
+var y: x;
 
-
-fun g(x: integer) : integer = 1 + 2 + 3;
-
-fun h(x: integer, y: integer, z: integer) : integer = 1 + 2 + 3
-
-# za ta primer nisem lih preprican (ni velikosti argumentov)
-#fun f(x: integer, y: integer) : integer = (
-#    {r = x + y},
-#    g(12),
-#    0
-#) {where var r: integer; fun g(x: integer) : integer = 1 + 1}
+fun f(t: arr[10] integer) : x = t

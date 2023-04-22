@@ -67,14 +67,12 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(Call call) {
-        System.out.println(call);
-        int size = 0;
+        int size = 0; // velikost argumentov
         Optional<Type> argumentType;
         for (Expr argument : call.arguments) {
             argumentType = types.valueFor(argument);
             if (argumentType.isEmpty())
                 continue;
-
             size += argumentType.get().sizeInBytes();
         }
         size += Constants.WordSize; // static link
@@ -82,11 +80,7 @@ public class FrameEvaluator implements Visitor {
         Frame.Builder builder = builders.pop();
         builder.addFunctionCall(size);
         builders.push(builder);
-        // TODO: obdelaj fun body (nsisem lih preprican)
-        // TODO: isto kot pri funkciji (mby)
-
     }
-
 
     @Override
     public void visit(Binary binary) {
@@ -149,11 +143,8 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(Where where) {
-        // TODO: se mi zdi da more bit tako k where ni del funDef.body
-        staticLevel++;
         where.defs.accept(this);
         where.expr.accept(this);
-        staticLevel--;
     }
 
 
@@ -172,19 +163,19 @@ public class FrameEvaluator implements Visitor {
         Frame.Builder builder;
         if (staticLevel <= 1)
             builder = new Frame.Builder(Frame.Label.named(funDef.name), staticLevel);
-        else {
+        else
             builder = new Frame.Builder(Frame.Label.nextAnonymous(), staticLevel);
-            builder.addParameter(Constants.WordSize); // old FP
-        }
+
+        builder.addParameter(Constants.WordSize); // static link
         builders.push(builder);
 
         for (Parameter parameter : funDef.parameters)
             parameter.accept(this);
 
-
         funDef.body.accept(this);
 
         frames.store(builder.build(), funDef);
+        builders.pop();
 
         staticLevel--;
     }
@@ -203,7 +194,7 @@ public class FrameEvaluator implements Visitor {
 
         int size = type.get().sizeInBytes();
 
-        if (staticLevel <= 1) {
+        if (staticLevel < 1) {
             String name = varDef.name;
             accesses.store(
                     new Access.Global(size, Frame.Label.named(name)),
