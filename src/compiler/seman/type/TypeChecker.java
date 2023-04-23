@@ -120,12 +120,14 @@ public class TypeChecker implements Visitor {
             if (!leftExprType.get().isInt() && !leftExprType.get().isLog()) // zagotovimo da sta ali log ali int
                 Report.error(binary.position, "PINS error: operator " + binary.operator + " cannot be applied to '" + leftExprType.get() + "', '" + rightExprType.get() + "'");
 
+            /*
             if (!leftExprType.get().isInt() &&
                     (binary.operator.equals(Binary.Operator.GT) ||
                             binary.operator.equals(Binary.Operator.GEQ) ||
                             binary.operator.equals(Binary.Operator.LT) ||
                             binary.operator.equals(Binary.Operator.LEQ)))
                 Report.error(binary.position, "PINS error: operator " + binary.operator + " cannot be applied to '" + leftExprType.get() + "', '" + rightExprType.get() + "'");
+            */
 
             types.store(new Type.Atom(Type.Atom.Kind.LOG), binary);
 
