@@ -1,1 +1,6 @@
-fun f(x: integer) : logical = 1 == 2 | 1 != 1
+var s: string;
+
+fun f(x: integer) : integer = (
+    {s = 'abc'},
+    0
+)
