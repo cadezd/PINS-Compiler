@@ -5,6 +5,7 @@
 
 package compiler.seman.type;
 
+import common.Constants;
 import common.Report;
 import compiler.common.Visitor;
 import compiler.parser.ast.def.*;
@@ -16,10 +17,7 @@ import compiler.parser.ast.type.TypeName;
 import compiler.seman.common.NodeDescription;
 import compiler.seman.type.type.Type;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static common.RequireNonNull.requireNonNull;
 
@@ -48,6 +46,31 @@ public class TypeChecker implements Visitor {
 
     @Override
     public void visit(Call call) {
+        // Standardna knjižnica
+        if (Constants.stdLibrary.get(call.name) != null) {
+            for (Expr argument : call.arguments)
+                argument.accept(this);
+
+            Optional<Type> argumentType;
+            List<Type> argumentTypes = new ArrayList<>();
+            for (Expr argument : call.arguments) {
+                argumentType = types.valueFor(argument);
+                argumentType.ifPresent(argumentTypes::add);
+            }
+
+            if (call.name.equals("print_str"))
+                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.STR)), call);
+            else if (call.name.equals("print_int"))
+                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.INT)), call);
+            else if (call.name.equals("print_log"))
+                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.LOG)), call);
+            else if (call.name.equals("rand_int")) {
+                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.INT)), call);
+            } else if (call.name.equals("seed")){
+                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.INT)), call);
+            }
+        }
+
         for (Expr argument : call.arguments)
             argument.accept(this);
 

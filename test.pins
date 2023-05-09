@@ -1,6 +1,6 @@
 var s: string;
 
 fun f(x: integer) : integer = (
-    {s = 'abc'},
-    0
+    print_int(123),
+    {x = 1}
 )

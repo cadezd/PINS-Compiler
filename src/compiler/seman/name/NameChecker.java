@@ -7,6 +7,7 @@ package compiler.seman.name;
 
 import static common.RequireNonNull.requireNonNull;
 
+import common.Constants;
 import common.Report;
 import compiler.common.Visitor;
 import compiler.parser.ast.def.*;
@@ -46,14 +47,16 @@ public class NameChecker implements Visitor {
     @Override
     public void visit(Call call) {
         // linking function call with its definition
-        Optional<Def> link = symbolTable.definitionFor(call.name);
+        if (Constants.stdLibrary.get(call.name) == null) {
+            Optional<Def> link = symbolTable.definitionFor(call.name);
 
-        if (link.isEmpty())
-            Report.error(call.position, "PINS error: function " + call.name + " is not defined");
-        else if (!(link.get() instanceof FunDef))
-            Report.error(call.position, "PINS error: " + call.name + " is not a function");
-        else
-            definitions.store(link.get(), call);
+            if (link.isEmpty())
+                Report.error(call.position, "PINS error: function " + call.name + " is not defined");
+            else if (!(link.get() instanceof FunDef))
+                Report.error(call.position, "PINS error: " + call.name + " is not a function");
+            else
+                definitions.store(link.get(), call);
+        }
 
         // visiting all arguments
         for (Expr arg : call.arguments)

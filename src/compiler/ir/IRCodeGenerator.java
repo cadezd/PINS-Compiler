@@ -30,6 +30,8 @@ import compiler.parser.ast.type.TypeName;
 import compiler.seman.common.NodeDescription;
 import compiler.seman.type.type.Type;
 
+import javax.swing.*;
+
 public class IRCodeGenerator implements Visitor {
     /**
      * Preslikava iz vozlišč AST v vmesno kodo.
@@ -83,15 +85,30 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Call call) {
+        // Standardna knjižnica
+        if (Constants.stdLibrary.get(call.name) != null) {
+            List<IRExpr> args = new ArrayList<>();
+            args.add(NameExpr.FP());
+            Optional<IRNode> node;
+            for (Expr expression : call.arguments) {
+                expression.accept(this);
+                node = imcCode.valueFor(expression);
+                if (node.isEmpty())
+                    continue;
+
+                args.add((IRExpr) node.get());
+            }
+            imcCode.store(new CallExpr(Label.named(call.name), args), call);
+            return;
+        }
+
         // Dobimo definicijo funkcije, ki jo kličemo
         Optional<Def> funDef = definitions.valueFor(call);
-
         if (funDef.isEmpty())
             return;
 
         // Dobimo frame funkcije, ki jo kličemo
         Optional<Frame> funFrame = frames.valueFor(funDef.get());
-
         if (funFrame.isEmpty())
             return;
 
@@ -111,9 +128,11 @@ public class IRCodeGenerator implements Visitor {
 
         for (Expr expression : call.arguments) {
             expression.accept(this);
+
             irNode = imcCode.valueFor(expression);
             if (irNode.isEmpty())
                 continue;
+
             args.add((IRExpr) irNode.get());
         }
 
