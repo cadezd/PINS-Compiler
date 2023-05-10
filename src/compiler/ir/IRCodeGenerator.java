@@ -21,6 +21,7 @@ import compiler.ir.chunk.Chunk;
 import compiler.ir.code.IRNode;
 import compiler.ir.code.expr.*;
 import compiler.ir.code.stmt.*;
+import compiler.parser.ast.Ast;
 import compiler.parser.ast.def.*;
 import compiler.parser.ast.def.FunDef.Parameter;
 import compiler.parser.ast.expr.*;
@@ -86,31 +87,15 @@ public class IRCodeGenerator implements Visitor {
     @Override
     public void visit(Call call) {
         // Standardna knjižnica
-        if (Constants.stdLibrary.get(call.name) != null) {
-            List<IRExpr> args = new ArrayList<>();
-            args.add(NameExpr.FP());
-            Optional<IRNode> node;
-            for (Expr expression : call.arguments) {
-                expression.accept(this);
-                node = imcCode.valueFor(expression);
-                if (node.isEmpty())
-                    continue;
-
-                args.add((IRExpr) node.get());
-            }
-            imcCode.store(new CallExpr(Label.named(call.name), args), call);
+        if (Constants.stdLibrary.containsKey(call.name)) {
+            handleStdLibrary(call);
             return;
         }
 
         // Dobimo definicijo funkcije, ki jo kličemo
-        Optional<Def> funDef = definitions.valueFor(call);
-        if (funDef.isEmpty())
-            return;
-
+        Def funDef = getDef(call);
         // Dobimo frame funkcije, ki jo kličemo
-        Optional<Frame> funFrame = frames.valueFor(funDef.get());
-        if (funFrame.isEmpty())
-            return;
+        Frame funFrame = getFrame(funDef);
 
         // Grajenje drevesa pri ESEQ
         NameExpr sp = NameExpr.SP();
@@ -123,20 +108,14 @@ public class IRCodeGenerator implements Visitor {
 
 
         // Pretvorba argumentov in klica v vmesno kodo za klic
-        Optional<IRNode> irNode;
-        List<IRExpr> args = new ArrayList<>();
-
-        for (Expr expression : call.arguments) {
-            expression.accept(this);
-
-            irNode = imcCode.valueFor(expression);
-            if (irNode.isEmpty())
-                continue;
-
-            args.add((IRExpr) irNode.get());
+        IRNode irNode;
+        List<IRExpr> arguments = new ArrayList<>();
+        for (Expr argument : call.arguments) {
+            irNode = getIRNode(argument);
+            arguments.add((IRExpr) irNode);
         }
 
-        CallExpr callExpr = new CallExpr(funFrame.get().label, args);
+        CallExpr callExpr = new CallExpr(funFrame.label, arguments);
 
         // Shranjevanje ESEQ stavka
         EseqExpr eseqExpr = new EseqExpr(moveStmt, callExpr);
@@ -145,52 +124,38 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Binary binary) {
-        // Obdelamo levo in desno stran izraza
-        binary.left.accept(this);
-        binary.right.accept(this);
-
         // Pridobimo obdelano levo in desno stran izraza
-        Optional<IRNode> leftExpr = imcCode.valueFor(binary.left);
-        Optional<IRNode> rightExpr = imcCode.valueFor(binary.right);
+        IRNode leftExpr = getIRNode(binary.left);
+        IRNode rightExpr = getIRNode(binary.right);
 
-        if (leftExpr.isEmpty() || rightExpr.isEmpty())
-            return;
-
-        // Izberemo pravilni operator izraza
-        BinopExpr.Operator operator;
 
         if (binary.operator == Binary.Operator.ASSIGN) {
-            MoveStmt moveStmt = new MoveStmt((IRExpr) leftExpr.get(), (IRExpr) rightExpr.get());
-            EseqExpr eseqExpr = new EseqExpr(moveStmt, (IRExpr) leftExpr.get());
+            MoveStmt moveStmt = new MoveStmt((IRExpr) leftExpr, (IRExpr) rightExpr);
+            EseqExpr eseqExpr = new EseqExpr(moveStmt, (IRExpr) leftExpr);
             imcCode.store(eseqExpr, binary);
 
         } else if (binary.operator == Binary.Operator.ARR) {
-            Optional<Type> arrType = types.valueFor(binary);
-            if (arrType.isEmpty())
+            Type arrType = getType(binary);
+
+            // index elementa  (idx * velikost tipa)
+            BinopExpr index = new BinopExpr((IRExpr) rightExpr, new ConstantExpr(arrType.sizeInBytes()), BinopExpr.Operator.MUL);
+
+            // levi del more biti spremenljivka (globalna - Mem, lokalna - Mem, parameter - Binop)
+            if (!(leftExpr instanceof MemExpr) && !(leftExpr instanceof BinopExpr))
                 return;
 
-            BinopExpr index = new BinopExpr(    // index elementa  (idx * velikost tipa)
-                    (IRExpr) rightExpr.get(),
-                    new ConstantExpr(arrType.get().sizeInBytes()),
-                    BinopExpr.Operator.ADD);
-
-            if (!(leftExpr.get() instanceof MemExpr))
-                return;
-
-            BinopExpr arrElement = new BinopExpr(   // naslov tabele + index elementa
-                    ((MemExpr) leftExpr.get()).expr,
+            // naslov tabele + index elementa
+            BinopExpr arrElement = new BinopExpr(
+                    (leftExpr instanceof MemExpr memExpr) ? memExpr.expr : (BinopExpr) leftExpr,
                     index,
                     BinopExpr.Operator.ADD);
 
             imcCode.store(new MemExpr(arrElement), binary);
 
         } else {
-            operator = BinopExpr.Operator.valueOf(binary.operator.name());
+            BinopExpr.Operator operator = BinopExpr.Operator.valueOf(binary.operator.name());
             imcCode.store(
-                    new BinopExpr(
-                            (IRExpr) leftExpr.get(),
-                            (IRExpr) rightExpr.get(),
-                            operator),
+                    new BinopExpr((IRExpr) leftExpr, (IRExpr) rightExpr, operator),
                     binary
             );
         }
@@ -198,95 +163,64 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Block block) {
+        // Iz n-1 stavkov naredimo blok, zadnji stavek je tip bloka
         List<IRStmt> statements = new ArrayList<>();
-        Optional<IRNode> node;
-
+        IRNode irNode;
         for (Expr expression : block.expressions) {
-            // Obdelamo izraz
-            expression.accept(this);
-
-            // Naredimo stavke iz bloka
-            node = imcCode.valueFor(expression);
-            if (node.isEmpty())
-                continue;
-
-            // Če je stavek ga dodaj, če je izraz ga pretvori v stavek
-            statements.add((node.get() instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) node.get());
+            irNode = getIRNode(expression);
+            statements.add((irNode instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) irNode);
         }
 
-        node = imcCode.valueFor(block.expressions.get(block.expressions.size() - 1));
-        if (node.isEmpty())
-            return;
-
+        IRNode lastIrNode = getIRNode(block.expressions.get(block.expressions.size() - 1));
         statements.remove(statements.size() - 1);
-        imcCode.store(new EseqExpr(
-                new SeqStmt(statements),
-                (IRExpr) node.get()
-        ), block);
+
+        imcCode.store(
+                new EseqExpr(new SeqStmt(statements), (IRExpr) lastIrNode),
+                block
+        );
     }
 
     @Override
     public void visit(For forLoop) {
-        // Obdelamo vse komponente for stavka
-        forLoop.counter.accept(this);
-        forLoop.low.accept(this);
-        forLoop.high.accept(this);
-        forLoop.step.accept(this);
-        forLoop.body.accept(this);
-
         // Ustvarimo labele
         LabelStmt l1 = new LabelStmt(Label.nextAnonymous());
         LabelStmt l2 = new LabelStmt(Label.nextAnonymous());
         LabelStmt l3 = new LabelStmt(Label.nextAnonymous());
 
-        // Vmesna koda za counter (counter = low)
-        Optional<IRNode> counter = imcCode.valueFor(forLoop.counter);
-        Optional<IRNode> low = imcCode.valueFor(forLoop.low);
-        if (counter.isEmpty() || low.isEmpty())
-            return;
 
-        MoveStmt moveCounter = new MoveStmt((IRExpr) counter.get(), (IRExpr) low.get());
+        // Vmesna koda za counter (counter = low)
+        IRNode counter = getIRNode(forLoop.counter);
+        IRNode low = getIRNode(forLoop.low);
+        MoveStmt moveCounter = new MoveStmt((IRExpr) counter, (IRExpr) low);
+
 
         // Vmesna koda za pogoj (counter < high)
-        Optional<IRNode> high = imcCode.valueFor(forLoop.high);
-        if (high.isEmpty())
-            return;
-
-        BinopExpr condition = new BinopExpr(
-                (IRExpr) low.get(),
-                (IRExpr) high.get(),
-                BinopExpr.Operator.LT);
+        IRNode high = getIRNode(forLoop.high);
+        BinopExpr condition = new BinopExpr((IRExpr) low, (IRExpr) high, BinopExpr.Operator.LT);
 
         CJumpStmt cJumpStmtL1L2 = new CJumpStmt(condition, l1.label, l2.label);
 
+
         // Vmesna koda telesa for zanke
-        Optional<IRNode> body = imcCode.valueFor(forLoop.body);
-        if (body.isEmpty())
-            return;
+        IRNode body = getIRNode(forLoop.body);
+
 
         // Vmesna koda za povečanje števca zanke (counter = counter + step)
-        Optional<IRNode> step = imcCode.valueFor(forLoop.step);
-        if (step.isEmpty())
-            return;
-
-        BinopExpr incrementCounter = new BinopExpr(
-                (IRExpr) counter.get(),
-                (IRExpr) step.get(),
-                BinopExpr.Operator.ADD);
-
-        MoveStmt updateCounter = new MoveStmt((IRExpr) counter.get(), incrementCounter);
+        IRNode step = getIRNode(forLoop.step);
+        BinopExpr incrementCounter = new BinopExpr((IRExpr) counter, (IRExpr) step, BinopExpr.Operator.ADD);
+        MoveStmt updateCounter = new MoveStmt((IRExpr) counter, incrementCounter);
 
         // Vmesna koda za skok na pogoj
         JumpStmt jumpStmtL3 = new JumpStmt(l3.label);
 
 
-        // Shranimo vmesno kodo
+        // Shranimo vmesno kodo (MOVE COUNTER, L3, CJUMP L1L2, L1, BODY, UPDATE COUNTER, JMP L3, L2)
         List<IRStmt> statements = new ArrayList<>();
         statements.add(moveCounter);
         statements.add(l3);
         statements.add(cJumpStmtL1L2);
         statements.add(l1);
-        statements.add((body.get() instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) body.get());
+        statements.add((body instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) body);
         statements.add(updateCounter);
         statements.add(jumpStmtL3);
         statements.add(l2);
@@ -297,23 +231,19 @@ public class IRCodeGenerator implements Visitor {
     @Override
     public void visit(Name name) {
         // Dobimo definicijo spremenljivke
-        Optional<Def> nameDef = definitions.valueFor(name);
-        if (nameDef.isEmpty())
-            return;
+        Def nameDef = getDef(name);
 
         // Dobimo dostop do spremenljivke
-        Optional<Access> nameAccess = accesses.valueFor(nameDef.get());
-        if (nameAccess.isEmpty())
-            return;
+        Access nameAccess = getAccess(nameDef);
 
         // Hendlamo spremenljivko glede na dostop
-        if (nameAccess.get() instanceof Access.Global global) {
+        if (nameAccess instanceof Access.Global global) {
 
             NameExpr nameExpr = new NameExpr(global.label);
             MemExpr memExpr = new MemExpr(nameExpr);
             imcCode.store(memExpr, name);
 
-        } else if (nameAccess.get() instanceof Access.Parameter parameter) {
+        } else if (nameAccess instanceof Access.Parameter parameter) {
 
             NameExpr nameExpr = NameExpr.FP();
             ConstantExpr constantExpr = new ConstantExpr(parameter.offset);
@@ -321,7 +251,7 @@ public class IRCodeGenerator implements Visitor {
             MemExpr memExpr = new MemExpr(binopExpr);
             imcCode.store(memExpr, name);
 
-        } else if (nameAccess.get() instanceof Access.Local local) {
+        } else if (nameAccess instanceof Access.Local local) {
 
             // Dodajamo mem-e
             int diff = Math.abs(currFrame.staticLevel - local.staticLevel);
@@ -330,27 +260,23 @@ public class IRCodeGenerator implements Visitor {
                 ConstantExpr constantExpr = new ConstantExpr(local.offset);
                 NameExpr nameExpr = NameExpr.FP();
                 BinopExpr binopExpr = new BinopExpr(nameExpr, constantExpr, BinopExpr.Operator.ADD);
-                imcCode.store(binopExpr, name);
+                imcCode.store(new MemExpr(binopExpr), name);
 
             } else {
                 NameExpr nameExpr = NameExpr.FP();
                 MemExpr memExpr = null;
-                for (int i = 0; i < diff; i++) {
+                for (int i = 0; i < diff; i++)
                     memExpr = new MemExpr(nameExpr);
-                }
 
                 ConstantExpr constantExpr = new ConstantExpr(local.offset);
                 BinopExpr binopExpr = new BinopExpr(memExpr, constantExpr, BinopExpr.Operator.ADD);
-                imcCode.store(binopExpr, name);
+                imcCode.store(new MemExpr(binopExpr), name);
             }
         }
     }
 
     @Override
     public void visit(IfThenElse ifThenElse) {
-        // Obdelamo vse komponente ifThen stavka
-        ifThenElse.condition.accept(this);
-        ifThenElse.thenExpression.accept(this);
 
         List<IRStmt> statements = new ArrayList<>();
 
@@ -359,36 +285,27 @@ public class IRCodeGenerator implements Visitor {
         LabelStmt l2 = new LabelStmt(Label.nextAnonymous());
 
         // Vmesna koda pogoja
-        Optional<IRNode> condition = imcCode.valueFor(ifThenElse.condition);
-        if (condition.isEmpty())
-            return;
+        IRNode condition = getIRNode(ifThenElse.condition);
 
-        CJumpStmt cJumpStmtL1L2 = new CJumpStmt((IRExpr) condition.get(), l1.label, l2.label);
+        CJumpStmt cJumpStmtL1L2 = new CJumpStmt((IRExpr) condition, l1.label, l2.label);
 
         // Vmesna koda then
-        Optional<IRNode> then = imcCode.valueFor(ifThenElse.thenExpression);
-        if (then.isEmpty())
-            return;
-
+        IRNode then = getIRNode(ifThenElse.thenExpression);
 
         statements.add(cJumpStmtL1L2);
         statements.add(l1);
-        statements.add((then.get() instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) then.get());
+        statements.add((then instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) then);
         statements.add(l2);
 
         // Vmesna koda else
         if (ifThenElse.elseExpression.isPresent()) {
-            ifThenElse.elseExpression.get().accept(this);
+            IRNode else1 = getIRNode(ifThenElse.elseExpression.get());
 
             LabelStmt l3 = new LabelStmt(Label.nextAnonymous());
             JumpStmt jumL3 = new JumpStmt(l3.label);
 
-            Optional<IRNode> else1 = imcCode.valueFor(ifThenElse.elseExpression.get());
-            if (else1.isEmpty())
-                return;
-
             statements.add(3, jumL3);
-            statements.add((else1.get() instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) else1.get());
+            statements.add((else1 instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) else1);
             statements.add(l3);
         }
 
@@ -401,11 +318,8 @@ public class IRCodeGenerator implements Visitor {
         if (literal.type == Atom.Type.STR) {
             Label l = Label.nextAnonymous();
             accesses.store(new Access.Global(Constants.WordSize, l), literal);
-            Optional<Access> access = accesses.valueFor(literal);
-            if (access.isEmpty())
-                return;
-
-            chunks.add(new Chunk.DataChunk((Access.Global) access.get(), literal.value));
+            Access access = getAccess(literal);
+            chunks.add(new Chunk.DataChunk((Access.Global) access, literal.value));
             imcCode.store(new NameExpr(l), literal);
             return;
         }
@@ -422,64 +336,44 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Unary unary) {
-        // Obdelamo izraz unarnega operatorja
-        unary.expr.accept(this);
-
-        Optional<IRNode> expr = imcCode.valueFor(unary.expr);
-        if (expr.isEmpty())
-            return;
+        IRNode expr = getIRNode(unary.expr);
 
         if (unary.operator == Unary.Operator.ADD) // Če je predznak plus pustimo konstanto
-            imcCode.store(expr.get(), unary);
-        else if (unary.operator == Unary.Operator.SUB) // Če je predznak minus zapišemo kot 0 - vrednost
-            imcCode.store(new BinopExpr(
-                            new ConstantExpr(0),
-                            (IRExpr) expr.get(),
-                            BinopExpr.Operator.SUB
-                    ),
-                    unary);
-        else { // Če je predznak negacija zapišemo obrnemo vrednost iz 0 v 1 ali obratno
-            ConstantExpr constantExprNegated = new ConstantExpr((((ConstantExpr) expr.get()).constant == 1) ? 0 : 1);
+            imcCode.store(expr, unary);
+        else if (unary.operator == Unary.Operator.SUB) { // Če je predznak minus zapišemo kot (CONST(0) - CONST(value))
+            BinopExpr binopExpr = new BinopExpr(new ConstantExpr(0), (IRExpr) expr, BinopExpr.Operator.SUB);
+            imcCode.store(binopExpr, unary);
+        } else { // Če je predznak negacija zapišemo obrnemo vrednost iz 0 v 1 ali obratno
+            ConstantExpr constantExprNegated = new ConstantExpr((((ConstantExpr) expr).constant == 1) ? 0 : 1);
             imcCode.store(constantExprNegated, unary);
         }
     }
 
     @Override
     public void visit(While whileLoop) {
-        // Obdelamo vse komponente while stavka
-        whileLoop.condition.accept(this);
-        whileLoop.body.accept(this);
-
         // Ustvarimo labele
         LabelStmt l1 = new LabelStmt(Label.nextAnonymous());
         LabelStmt l2 = new LabelStmt(Label.nextAnonymous());
         LabelStmt l3 = new LabelStmt(Label.nextAnonymous());
 
         // Vmesna koda za pogoj
-        Optional<IRNode> condition = imcCode.valueFor(whileLoop.condition);
-        if (condition.isEmpty())
-            return;
+        IRNode condition = getIRNode(whileLoop.condition);
 
-        CJumpStmt cJumpStmtL1L2 = new CJumpStmt(
-                (IRExpr) condition.get(),
-                l1.label,
-                l2.label
-        );
+        CJumpStmt cJumpStmtL1L2 = new CJumpStmt((IRExpr) condition, l1.label, l2.label);
 
         // Vmesna koda telesa while stavka
-        Optional<IRNode> body = imcCode.valueFor(whileLoop.body);
-        if (body.isEmpty())
-            return;
+        IRNode body = getIRNode(whileLoop.body);
 
         // Vmesna koda za labelo, ki skoči na začetek zanke
         JumpStmt jumpL3 = new JumpStmt(l3.label);
 
 
+        // Shranimo vmesno kodo za while zanko (L3, CJUMP L1L2, L1, BODY, JUMP L3, L2)
         List<IRStmt> statements = new ArrayList<>();
         statements.add(l3);
         statements.add(cJumpStmtL1L2);
         statements.add(l1);
-        statements.add((body.get() instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) body.get());
+        statements.add((body instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) body);
         statements.add(jumpL3);
         statements.add(l2);
 
@@ -488,16 +382,12 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Where where) {
-        // Obdelamo definicije in expressione
+        // Obdelamo definicije
         where.defs.accept(this);
-        where.expr.accept(this);
 
         // Shranimo vmesno kodo za izraze iz where bloka
-        Optional<IRNode> expr = imcCode.valueFor(where.expr);
-        if (expr.isEmpty())
-            return;
-
-        imcCode.store(expr.get(), where);
+        IRNode expr = getIRNode(where.expr);
+        imcCode.store(expr, where);
     }
 
     @Override
@@ -510,25 +400,20 @@ public class IRCodeGenerator implements Visitor {
     @Override
     public void visit(FunDef funDef) {
         // Pridobimo frame funkcije
-        Optional<Frame> funFrame = frames.valueFor(funDef);
-        if (funFrame.isEmpty())
-            return;
+        Frame funFrame = getFrame(funDef);
 
         // Si zapomnimo trenutno funkcijo in jo obdelamo (lokalne sprem. v drugih funkcijah)
         Frame oldFrame = currFrame;
-        currFrame = funFrame.get();
-        funDef.body.accept(this);
+        currFrame = funFrame;
 
         // Pridobimo vmesno kodo funkcije
-        Optional<IRNode> funCode = imcCode.valueFor(funDef.body);
-        if (funCode.isEmpty())
-            return;
+        IRNode funCode = getIRNode(funDef.body);
 
         // naredimo še MOVE del in vmesno kodo shranimo
         NameExpr nameExpr = NameExpr.FP();
         MemExpr memExpr = new MemExpr(nameExpr);
-        MoveStmt moveStmt = new MoveStmt(memExpr, (IRExpr) funCode.get());
-        chunks.add(new Chunk.CodeChunk(funFrame.get(), moveStmt));
+        MoveStmt moveStmt = new MoveStmt(memExpr, (IRExpr) funCode);
+        chunks.add(new Chunk.CodeChunk(funFrame, moveStmt));
 
         currFrame = oldFrame;
     }
@@ -539,11 +424,9 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(VarDef varDef) {
-        Optional<Access> varAccess = accesses.valueFor(varDef);
-        if (varAccess.isEmpty())
-            return;
+        Access varAccess = getAccess(varDef);
 
-        if (varAccess.get() instanceof Access.Global global)
+        if (varAccess instanceof Access.Global global)
             chunks.add(new Chunk.GlobalChunk(global));
     }
 
@@ -561,5 +444,70 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(TypeName name) {
+    }
+
+    /*AUXILIARY METHODS*/
+    private void handleStdLibrary(Call call) {
+        List<IRExpr> arguments = new ArrayList<>();
+        arguments.add(NameExpr.FP());
+
+        IRNode irNode;
+        for (Expr argument : call.arguments) {
+            irNode = getIRNode(argument);
+            arguments.add((IRExpr) irNode);
+        }
+
+        imcCode.store(new CallExpr(Label.named(call.name), arguments), call);
+    }
+
+    private IRNode getIRNode(Ast ast) {
+        ast.accept(this);
+        Optional<IRNode> irNode = imcCode.valueFor(ast);
+        if (irNode.isEmpty()) {
+            Report.error(ast.position, "PINS error: missing IRNode");
+            return null;
+        }
+
+        return irNode.get();
+    }
+
+    private Def getDef(Ast ast) {
+        Optional<Def> def = definitions.valueFor(ast);
+        if (def.isEmpty()) {
+            Report.error(ast.position, "PINS error: missing definition");
+            return null;
+        }
+
+        return def.get();
+    }
+
+    private Frame getFrame(Ast ast) {
+        Optional<Frame> frame = frames.valueFor(ast);
+        if (frame.isEmpty()) {
+            Report.error(ast.position, "PINS error: missing frame");
+            return null;
+        }
+
+        return frame.get();
+    }
+
+    private Type getType(Ast ast) {
+        Optional<Type> type = types.valueFor(ast);
+        if (type.isEmpty()) {
+            Report.error(ast.position, "PINS error: missing type");
+            return null;
+        }
+
+        return type.get();
+    }
+
+    private Access getAccess(Ast ast) {
+        Optional<Access> access = accesses.valueFor(ast);
+        if (access.isEmpty()) {
+            Report.error(ast.position, "PINS error: missing access");
+            return null;
+        }
+
+        return access.get();
     }
 }
