@@ -47,28 +47,9 @@ public class TypeChecker implements Visitor {
     @Override
     public void visit(Call call) {
         // Standardna knjižnica
-        if (Constants.stdLibrary.get(call.name) != null) {
-            for (Expr argument : call.arguments)
-                argument.accept(this);
-
-            Optional<Type> argumentType;
-            List<Type> argumentTypes = new ArrayList<>();
-            for (Expr argument : call.arguments) {
-                argumentType = types.valueFor(argument);
-                argumentType.ifPresent(argumentTypes::add);
-            }
-
-            if (call.name.equals("print_str"))
-                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.STR)), call);
-            else if (call.name.equals("print_int"))
-                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.INT)), call);
-            else if (call.name.equals("print_log"))
-                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.LOG)), call);
-            else if (call.name.equals("rand_int")) {
-                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.INT)), call);
-            } else if (call.name.equals("seed")){
-                types.store(new Type.Function(argumentTypes, new Type.Atom(Type.Atom.Kind.INT)), call);
-            }
+        if (Constants.stdLibrary.containsKey(call.name)) {
+            handelStdLibrary(call);
+            return;
         }
 
         for (Expr argument : call.arguments)
@@ -93,13 +74,10 @@ public class TypeChecker implements Visitor {
 
         if (funType.isPresent()) {
             Optional<Type.Function> function = funType.get().asFunction();
-
             if (function.isEmpty())
                 return;
 
-            if (call.arguments.size() != function.get().parameters.size())
-                Report.error(call.position, "PINS error: wrong number of arguments - expected " + function.get().parameters.size() + ", got " + call.arguments.size());
-
+            handleWrongNumberOfArguments(call, function.get().parameters);
             handleWrongArgumentTypes(function.get(), call);
 
             types.store(function.get().returnType, call);
@@ -406,6 +384,55 @@ public class TypeChecker implements Visitor {
     }
 
     /*AUXILIARY METHODS*/
+    private void handelStdLibrary(Call call) {
+        for (Expr argument : call.arguments)
+            argument.accept(this);
+
+        Optional<Type> argumentType;
+        List<Type> argumentTypes = new ArrayList<>();
+        for (Expr argument : call.arguments) {
+            argumentType = types.valueFor(argument);
+            argumentType.ifPresent(argumentTypes::add);
+        }
+
+        List<Type> parameters = new ArrayList<>();
+        if (call.name.equals("print_str")) { // (str) -> str
+            parameters.add(new Type.Atom(Type.Atom.Kind.STR));
+            handleWrongNumberOfArguments(call, parameters);
+            handleWrongArgumentTypes(new Type.Function(parameters, new Type.Atom(Type.Atom.Kind.STR)), call);
+            types.store(new Type.Atom(Type.Atom.Kind.STR), call);
+
+        } else if (call.name.equals("print_int")) { // (int) -> int
+            parameters.add(new Type.Atom(Type.Atom.Kind.INT));
+            handleWrongNumberOfArguments(call, parameters);
+            handleWrongArgumentTypes(new Type.Function(parameters, new Type.Atom(Type.Atom.Kind.INT)), call);
+            types.store(new Type.Atom(Type.Atom.Kind.INT), call);
+
+        } else if (call.name.equals("print_log")) { // (log) -> log
+            parameters.add(new Type.Atom(Type.Atom.Kind.LOG));
+            handleWrongNumberOfArguments(call, parameters);
+            handleWrongArgumentTypes(new Type.Function(parameters, new Type.Atom(Type.Atom.Kind.LOG)), call);
+            types.store(new Type.Atom(Type.Atom.Kind.LOG), call);
+
+        } else if (call.name.equals("rand_int")) { // (int, int) -> int
+            parameters.add(new Type.Atom(Type.Atom.Kind.INT));
+            parameters.add(new Type.Atom(Type.Atom.Kind.INT));
+            handleWrongNumberOfArguments(call, parameters);
+            handleWrongArgumentTypes(new Type.Function(parameters, new Type.Atom(Type.Atom.Kind.INT)), call);
+            types.store(new Type.Atom(Type.Atom.Kind.INT), call);
+
+        } else if (call.name.equals("seed")) { // (int) -> int
+            parameters.add(new Type.Atom(Type.Atom.Kind.INT));
+            handleWrongNumberOfArguments(call, parameters);
+            handleWrongArgumentTypes(new Type.Function(parameters, new Type.Atom(Type.Atom.Kind.INT)), call);
+            types.store(new Type.Atom(Type.Atom.Kind.INT), call);
+        }
+    }
+
+    private void handleWrongNumberOfArguments(Call call, List<Type> parameters) {
+        if (call.arguments.size() != parameters.size())
+            Report.error(call.position, "PINS error: wrong number of arguments - expected " + parameters.size() + ", got " + call.arguments.size());
+    }
 
     private void handleWrongArgumentTypes(Type.Function function, Call call) {
         boolean error = false;
@@ -421,7 +448,7 @@ public class TypeChecker implements Visitor {
             sb.append(function.parameters.get(i)).append("', '");
         sb.delete(sb.length() - 3, sb.length());
 
-        sb.append("  got: '");
+        sb.append(" got: '");
 
         for (int i = 0; i < call.arguments.size(); i++)
             sb.append(types.valueFor(call.arguments.get(i)).get()).append("', '");
@@ -429,5 +456,4 @@ public class TypeChecker implements Visitor {
 
         Report.error(call.position, sb.toString());
     }
-
 }

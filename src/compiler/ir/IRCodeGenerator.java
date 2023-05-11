@@ -21,6 +21,7 @@ import compiler.ir.chunk.Chunk;
 import compiler.ir.code.IRNode;
 import compiler.ir.code.expr.*;
 import compiler.ir.code.stmt.*;
+import compiler.lexer.Position;
 import compiler.parser.ast.Ast;
 import compiler.parser.ast.def.*;
 import compiler.parser.ast.def.FunDef.Parameter;
@@ -110,6 +111,11 @@ public class IRCodeGenerator implements Visitor {
         // Pretvorba argumentov in klica v vmesno kodo za klic
         IRNode irNode;
         List<IRExpr> arguments = new ArrayList<>();
+        if (funFrame.staticLevel == 1)
+            arguments.add(new ConstantExpr(-1));
+        else
+            arguments.add(NameExpr.FP());
+
         for (Expr argument : call.arguments) {
             irNode = getIRNode(argument);
             arguments.add((IRExpr) irNode);
