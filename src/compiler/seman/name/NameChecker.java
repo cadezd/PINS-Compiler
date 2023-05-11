@@ -46,21 +46,22 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Call call) {
-        // linking function call with its definition
-        if (Constants.stdLibrary.get(call.name) == null) {
-            Optional<Def> link = symbolTable.definitionFor(call.name);
-
-            if (link.isEmpty())
-                Report.error(call.position, "PINS error: function " + call.name + " is not defined");
-            else if (!(link.get() instanceof FunDef))
-                Report.error(call.position, "PINS error: " + call.name + " is not a function");
-            else
-                definitions.store(link.get(), call);
+        if (Constants.stdLibrary.containsKey(call.name)) {
+            // visiting all arguments
+            for (Expr arg : call.arguments)
+                navigate(arg);
+            return;
         }
 
-        // visiting all arguments
-        for (Expr arg : call.arguments)
-            navigate(arg);
+        // linking function call with its definition
+        Optional<Def> link = symbolTable.definitionFor(call.name);
+
+        if (link.isEmpty())
+            Report.error(call.position, "PINS error: function " + call.name + " is not defined");
+        else if (!(link.get() instanceof FunDef))
+            Report.error(call.position, "PINS error: " + call.name + " is not a function");
+        else
+            definitions.store(link.get(), call);
     }
 
     @Override

@@ -1,2 +1,2 @@
 var x: integer;
-fun f(y: integer): integer = rand_int(123, false)
+fun f(y: integer): integer = rand_int(123, 123)
