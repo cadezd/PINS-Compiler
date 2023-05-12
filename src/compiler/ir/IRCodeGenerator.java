@@ -152,14 +152,13 @@ public class IRCodeGenerator implements Visitor {
             // index elementa  (idx * velikost tipa)
             BinopExpr index = new BinopExpr((IRExpr) rightExpr, new ConstantExpr(arrType.sizeInBytes()), BinopExpr.Operator.MUL);
 
-
             // levi del more biti spremenljivka (globalna - Mem, lokalna - Mem, parameter - Binop)
-            if (!(leftExpr instanceof MemExpr) && !(leftExpr instanceof BinopExpr))
+            if (!(leftExpr instanceof MemExpr))
                 return;
 
             // naslov tabele + index elementa
             BinopExpr arrElement = new BinopExpr(
-                    (leftExpr instanceof MemExpr memExpr) ? memExpr.expr : (BinopExpr) leftExpr,
+                    (MemExpr) leftExpr,
                     index,
                     BinopExpr.Operator.ADD);
 
@@ -209,7 +208,7 @@ public class IRCodeGenerator implements Visitor {
 
         // Vmesna koda za pogoj (counter < high)
         IRNode high = getIRNode(forLoop.high);
-        BinopExpr condition = new BinopExpr((IRExpr) low, (IRExpr) high, BinopExpr.Operator.LT);
+        BinopExpr condition = new BinopExpr((IRExpr) counter, (IRExpr) high, BinopExpr.Operator.LT);
 
         CJumpStmt cJumpStmtL1L2 = new CJumpStmt(condition, l1.label, l2.label);
 
