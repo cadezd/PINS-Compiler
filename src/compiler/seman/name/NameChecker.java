@@ -46,12 +46,12 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Call call) {
-        if (Constants.stdLibrary.containsKey(call.name)) {
-            // visiting all arguments
-            for (Expr arg : call.arguments)
-                navigate(arg);
+        // visiting all arguments
+        for (Expr arg : call.arguments)
+            navigate(arg);
+
+        if (Constants.stdLibrary.containsKey(call.name))
             return;
-        }
 
         // linking function call with its definition
         Optional<Def> link = symbolTable.definitionFor(call.name);

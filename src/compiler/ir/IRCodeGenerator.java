@@ -111,10 +111,16 @@ public class IRCodeGenerator implements Visitor {
         // Pretvorba argumentov in klica v vmesno kodo za klic
         IRNode irNode;
         List<IRExpr> arguments = new ArrayList<>();
-        if (funFrame.staticLevel == 1)
+        if (currFrame.staticLevel == 1)
             arguments.add(new ConstantExpr(-1));
-        else
-            arguments.add(NameExpr.FP());
+        else {
+            int diff = Math.abs(currFrame.staticLevel - funFrame.staticLevel);
+            MemExpr memExpr1 = new MemExpr(NameExpr.FP());
+            for (int i = 1; i < diff; i++)
+                memExpr1 = new MemExpr(memExpr1);
+
+            arguments.add(memExpr1);
+        }
 
         for (Expr argument : call.arguments) {
             irNode = getIRNode(argument);
@@ -145,6 +151,7 @@ public class IRCodeGenerator implements Visitor {
 
             // index elementa  (idx * velikost tipa)
             BinopExpr index = new BinopExpr((IRExpr) rightExpr, new ConstantExpr(arrType.sizeInBytes()), BinopExpr.Operator.MUL);
+
 
             // levi del more biti spremenljivka (globalna - Mem, lokalna - Mem, parameter - Binop)
             if (!(leftExpr instanceof MemExpr) && !(leftExpr instanceof BinopExpr))
