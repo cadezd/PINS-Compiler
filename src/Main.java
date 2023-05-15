@@ -15,6 +15,9 @@ import compiler.common.PrettyPrintVisitor4;
 import compiler.frm.Access;
 import compiler.frm.Frame;
 import compiler.frm.FrameEvaluator;
+import compiler.gen.LinCodeGenerator;
+import compiler.gen.Memory;
+import compiler.interpret.Interpreter;
 import compiler.ir.IRCodeGenerator;
 import compiler.ir.IRPrettyPrint;
 import compiler.lexer.Lexer;
@@ -30,7 +33,7 @@ import compiler.seman.type.type.Type;
 public class Main {
     /**
      * Metoda, ki izvede celotni proces prevajanja.
-     *
+     * 
      * @param args parametri ukazne vrstice.
      */
     public static void main(String[] args) throws Exception {
@@ -63,7 +66,7 @@ public class Main {
         /**
          * Izvedi sintaksno analizo.
          */
-        Optional<PrintStream> out = cli.dumpPhases.contains(Phase.SYN)
+        Optional<PrintStream> out = cli.dumpPhases.contains(Phase.SYN) 
                 ? Optional.of(System.out)
                 : Optional.empty();
         var parser = new Parser(symbols, out);
@@ -136,6 +139,22 @@ public class Main {
         }
         if (cli.execPhase == Phase.IMC) {
             return;
+        }
+        /**
+         * Linearizacija vmesne kode.
+         */
+        var memory = new Memory(cli.memory);
+        var mainCodeChunk = new LinCodeGenerator(memory).generateCode(generator.chunks);
+        if (!cli.dumpPhases.contains(Phase.INT)) {
+            return;
+        }
+        /**
+         * Izvajanje vmesne kode.
+         */
+        if (mainCodeChunk.isPresent()) {
+            Optional<PrintStream> outputStream = cli.dumpPhases.contains(Phase.INT) ? Optional.of(System.out) : Optional.empty();
+            var interpreter = new Interpreter(memory, outputStream);
+            interpreter.interpret(mainCodeChunk.get());
         }
     }
 }
