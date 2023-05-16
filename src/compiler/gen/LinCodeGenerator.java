@@ -23,7 +23,7 @@ import compiler.ir.code.stmt.*;
 public class LinCodeGenerator {
     /**
      * Pomnilnik navideznega stroja. 
-     * 
+     *
      * Vanj shranimo kodo, globalne spremenljivke ter globalne vrednosti.
      */
     private Memory memory;
@@ -31,7 +31,7 @@ public class LinCodeGenerator {
     /**
      * Odmik v pomnilniku.
      */
-    private int offset = Constants.WordSize; 
+    private int offset = Constants.WordSize;
 
     public LinCodeGenerator(Memory memory) {
         requireNonNull(memory);
@@ -70,7 +70,7 @@ public class LinCodeGenerator {
         }
         return mainCodeChunk;
     }
-    
+
     private Chunk.CodeChunk linearizeChunk(Chunk.CodeChunk chunk) {
         var linCode = linearize(chunk.code);
         return new Chunk.CodeChunk(chunk.frame, linCode);
@@ -118,11 +118,11 @@ public class LinCodeGenerator {
         var lhs = linearize(binop.lhs);
         var rhs = linearize(binop.rhs);
         return new EseqExpr(
-            new SeqStmt(flatten(of(
-                lhs.stmt.statements(),
-                rhs.stmt.statements()
-            ))), 
-            new BinopExpr(lhs.expr, rhs.expr, binop.op));
+                new SeqStmt(flatten(of(
+                        lhs.stmt.statements(),
+                        rhs.stmt.statements()
+                ))),
+                new BinopExpr(lhs.expr, rhs.expr, binop.op));
     }
 
     private EseqExpr linearize(CallExpr call) {
@@ -133,14 +133,19 @@ public class LinCodeGenerator {
             allStatements.statements.addAll(eseq.stmt.statements());
             var temp = new TempExpr(Frame.Temp.next());
             var move = new MoveStmt(
-                temp,
-                eseq.expr);
+                    temp,
+                    eseq.expr);
             allStatements.statements.add(move);
             args.add(temp);
         }
-        return new EseqExpr(
-            allStatements, 
-            new CallExpr(call.label, args));
+        var resultTemp = new TempExpr(Frame.Temp.next());
+        allStatements.statements.add(new MoveStmt(
+                resultTemp,
+                new CallExpr(call.label, args)));
+        var eseq = new EseqExpr(
+                allStatements,
+                resultTemp);
+        return eseq;
     }
 
     private EseqExpr linearize(ConstantExpr constant) {
@@ -151,18 +156,18 @@ public class LinCodeGenerator {
         var linStmt = linearize(eseq.stmt).statements;
         var linExpr = linearize(eseq.expr);
         return new EseqExpr(
-            new SeqStmt(flatten(of(
-                linStmt,
-                linExpr.stmt.statements()
-            ))), 
-            linExpr.expr);
+                new SeqStmt(flatten(of(
+                        linStmt,
+                        linExpr.stmt.statements()
+                ))),
+                linExpr.expr);
     }
 
     private EseqExpr linearize(MemExpr mem) {
         var linExpr = linearize(mem.expr);
         return new EseqExpr(
-            new SeqStmt(linExpr.stmt.statements()), 
-            new MemExpr(linExpr.expr));
+                new SeqStmt(linExpr.stmt.statements()),
+                new MemExpr(linExpr.expr));
     }
 
     private EseqExpr linearize(NameExpr name) {
@@ -176,17 +181,17 @@ public class LinCodeGenerator {
     private SeqStmt linearize(CJumpStmt cjump) {
         var linCond = linearize(cjump.condition);
         return new SeqStmt(
-            flatten(of(
-                linCond.stmt.statements(),
-                new CJumpStmt(linCond.expr, cjump.thenLabel, cjump.elseLabel).statements()
-            )));
+                flatten(of(
+                        linCond.stmt.statements(),
+                        new CJumpStmt(linCond.expr, cjump.thenLabel, cjump.elseLabel).statements()
+                )));
     }
 
     private SeqStmt linearize(ExpStmt exp) {
         var linExpr = linearize(exp.expr);
         return new SeqStmt(flatten(of(
-            linExpr.stmt.statements(),
-            new ExpStmt(linExpr.expr).statements()
+                linExpr.stmt.statements(),
+                new ExpStmt(linExpr.expr).statements()
         )));
     }
 
@@ -202,16 +207,16 @@ public class LinCodeGenerator {
         var linDst = linearize(move.dst);
         var linSrc = linearize(move.src);
         return new SeqStmt(flatten(of(
-            linDst.stmt.statements(),
-            linSrc.stmt.statements(),
-            new MoveStmt(linDst.expr, linSrc.expr).statements()
+                linDst.stmt.statements(),
+                linSrc.stmt.statements(),
+                new MoveStmt(linDst.expr, linSrc.expr).statements()
         )));
     }
 
     private SeqStmt linearize(SeqStmt seq) {
         var linStmts = seq.statements.stream()
-            .map(stmt -> linearize(stmt).statements())
-            .collect(Collectors.toList());
+                .map(stmt -> linearize(stmt).statements())
+                .collect(Collectors.toList());
         return new SeqStmt(flatten(linStmts));
     }
 
@@ -222,5 +227,5 @@ public class LinCodeGenerator {
             res.addAll(list);
         }
         return res;
-    } 
+    }
 }

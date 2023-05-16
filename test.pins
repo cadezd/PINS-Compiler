@@ -1,0 +1,12 @@
+var ar: arr[12] integer;
+
+fun main(x : integer) : integer = (
+    {for i = 1, 12, 1: (
+        {ar[i] = i}
+    )},
+
+    {for i = 0, 12, 1: (
+        print_int(ar[i])
+    )},
+    0
+) {where var i: integer}

@@ -113,7 +113,13 @@ public class IRCodeGenerator implements Visitor {
         List<IRExpr> arguments = new ArrayList<>();
         if (currFrame.staticLevel == 1)
             arguments.add(new ConstantExpr(-1));
-        else {
+        else if (currFrame.staticLevel == funFrame.staticLevel) {
+            MemExpr memExpr1 = new MemExpr(NameExpr.FP());
+            arguments.add(memExpr1);
+        } else if (currFrame.staticLevel - funFrame.staticLevel == -1) {
+            IRExpr irExpr = NameExpr.FP();
+            arguments.add(irExpr);
+        } else {
             int diff = Math.abs(currFrame.staticLevel - funFrame.staticLevel);
             MemExpr memExpr1 = new MemExpr(NameExpr.FP());
             for (int i = 1; i < diff; i++)
@@ -158,7 +164,7 @@ public class IRCodeGenerator implements Visitor {
 
             // naslov tabele + index elementa
             BinopExpr arrElement = new BinopExpr(
-                    (MemExpr) leftExpr,
+                    ((MemExpr) leftExpr).expr,
                     index,
                     BinopExpr.Operator.ADD);
 
