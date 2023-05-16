@@ -18,6 +18,7 @@ import compiler.frm.FrameEvaluator;
 import compiler.gen.LinCodeGenerator;
 import compiler.gen.Memory;
 import compiler.interpret.Interpreter;
+import compiler.interpret.Interpreter1;
 import compiler.ir.IRCodeGenerator;
 import compiler.ir.IRPrettyPrint;
 import compiler.lexer.Lexer;
