@@ -146,41 +146,26 @@ public class IRCodeGenerator implements Visitor {
             Type arrType = getType(binary);
 
             // index elementa  (idx * velikost tipa)
-            BinopExpr index = new BinopExpr((IRExpr) rightExpr, new ConstantExpr(arrType.sizeInBytes()), BinopExpr.Operator.MUL);
+            BinopExpr index = new BinopExpr(
+                    (IRExpr) rightExpr,
+                    new ConstantExpr(arrType.sizeInBytes()),
+                    BinopExpr.Operator.MUL
+            );
 
-            if (leftExpr instanceof MemExpr memExpr) {  // Tabela parameter
+            // naslov elementa (arr_address + index_elementa)
+            BinopExpr arrayElementAddress = new BinopExpr(
+                    (IRExpr) leftExpr,
+                    index,
+                    BinopExpr.Operator.ADD
+            );
+            MemExpr arrayElementValue = new MemExpr(arrayElementAddress);
 
-                // Naslov notranje / "child" tabele se ne nahaja v pomnilniku
-                // Naslov zunanje / "parent" tabele se nahaja v pomnilniku
-                boolean isInnerArray = (binary.left instanceof Binary leftBinary
-                        && leftBinary.operator == Binary.Operator.ARR);
-
-                BinopExpr arrayElementAddress = new BinopExpr(
-                        (isInnerArray) ? memExpr.expr : memExpr,
-                        index,
-                        BinopExpr.Operator.ADD
-                );
-                MemExpr arrayElementValue = new MemExpr(arrayElementAddress);
-                imcCode.store(arrayElementValue, binary);
-
-            } else if (leftExpr instanceof BinopExpr arrayAddress) { //  Tabela - lokalna
-                BinopExpr arrayElementAddress = new BinopExpr(
-                        arrayAddress,
-                        index,
-                        BinopExpr.Operator.ADD
-                );
-                MemExpr arrayElementValue = new MemExpr(arrayElementAddress);
-                imcCode.store(arrayElementValue, binary);
-
-            } else if (leftExpr instanceof NameExpr arrayAddress) { // Tabele - globalna
-                BinopExpr arrayElementAddress = new BinopExpr(
-                        arrayAddress,
-                        index,
-                        BinopExpr.Operator.ADD
-                );
-                MemExpr arrayElementValue = new MemExpr(arrayElementAddress);
-                imcCode.store(arrayElementValue, binary);
-            }
+            imcCode.store(
+                    (arrType.isArray()) ?
+                            arrayElementAddress :
+                            arrayElementValue,
+                    binary
+            );
 
         } else {
             BinopExpr.Operator operator = BinopExpr.Operator.valueOf(binary.operator.name());
