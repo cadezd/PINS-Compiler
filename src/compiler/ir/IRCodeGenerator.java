@@ -21,7 +21,6 @@ import compiler.ir.chunk.Chunk;
 import compiler.ir.code.IRNode;
 import compiler.ir.code.expr.*;
 import compiler.ir.code.stmt.*;
-import compiler.lexer.Position;
 import compiler.parser.ast.Ast;
 import compiler.parser.ast.def.*;
 import compiler.parser.ast.def.FunDef.Parameter;
@@ -31,8 +30,6 @@ import compiler.parser.ast.type.Atom;
 import compiler.parser.ast.type.TypeName;
 import compiler.seman.common.NodeDescription;
 import compiler.seman.type.type.Type;
-
-import javax.swing.*;
 
 public class IRCodeGenerator implements Visitor {
     /**
@@ -99,44 +96,38 @@ public class IRCodeGenerator implements Visitor {
         Frame funFrame = getFrame(funDef);
 
         // Grajenje drevesa pri ESEQ
-        NameExpr sp = NameExpr.SP();
+        NameExpr stackPointer = NameExpr.SP();
         ConstantExpr offset = new ConstantExpr(currFrame.oldFPOffset());
-        BinopExpr binopExpr = new BinopExpr(sp, offset, BinopExpr.Operator.SUB);
+        BinopExpr dstAddress = new BinopExpr(stackPointer, offset, BinopExpr.Operator.SUB);
 
-        MemExpr memExpr = new MemExpr(binopExpr);
-        NameExpr fp = NameExpr.FP();
-        MoveStmt moveStmt = new MoveStmt(memExpr, fp);
+        MemExpr dstAddress1 = new MemExpr(dstAddress);
+        NameExpr framePointer = NameExpr.FP();
+        MoveStmt returnValue = new MoveStmt(dstAddress1, framePointer);
 
 
-        // Pretvorba argumentov in klica v vmesno kodo za klic
-        IRNode irNode;
-        List<IRExpr> arguments = new ArrayList<>();
-        if (currFrame.staticLevel == 1)
-            arguments.add(new ConstantExpr(-1));
-        else if (currFrame.staticLevel == funFrame.staticLevel) {
-            MemExpr memExpr1 = new MemExpr(NameExpr.FP());
-            arguments.add(memExpr1);
-        } else if (currFrame.staticLevel - funFrame.staticLevel == -1) {
-            IRExpr irExpr = NameExpr.FP();
-            arguments.add(irExpr);
-        } else {
-            int diff = Math.abs(currFrame.staticLevel - funFrame.staticLevel);
-            MemExpr memExpr1 = new MemExpr(NameExpr.FP());
-            for (int i = 1; i < diff; i++)
-                memExpr1 = new MemExpr(memExpr1);
-
-            arguments.add(memExpr1);
+        // Dobimo static link
+        IRExpr staticLink;
+        int diff = currFrame.staticLevel - funFrame.staticLevel;
+        if (diff == -1)
+            staticLink = NameExpr.FP();
+        else {
+            staticLink = new MemExpr(NameExpr.FP());
+            for (int i = 0; i < diff; i++)
+                staticLink = new MemExpr(staticLink);
         }
 
+        // Dodamo argumente
+        List<IRExpr> arguments = new ArrayList<>();
+        if (funFrame.staticLevel == 1) arguments.add(new ConstantExpr(-1));
+        else arguments.add(staticLink);
+
         for (Expr argument : call.arguments) {
-            irNode = getIRNode(argument);
-            arguments.add((IRExpr) irNode);
+            arguments.add((IRExpr) getIRNode(argument));
         }
 
         CallExpr callExpr = new CallExpr(funFrame.label, arguments);
-
         // Shranjevanje ESEQ stavka
-        EseqExpr eseqExpr = new EseqExpr(moveStmt, callExpr);
+        EseqExpr eseqExpr = new EseqExpr(returnValue, callExpr);
         imcCode.store(eseqExpr, call);
     }
 
@@ -145,7 +136,6 @@ public class IRCodeGenerator implements Visitor {
         // Pridobimo obdelano levo in desno stran izraza
         IRNode leftExpr = getIRNode(binary.left);
         IRNode rightExpr = getIRNode(binary.right);
-
 
         if (binary.operator == Binary.Operator.ASSIGN) {
             MoveStmt moveStmt = new MoveStmt((IRExpr) leftExpr, (IRExpr) rightExpr);
@@ -158,17 +148,39 @@ public class IRCodeGenerator implements Visitor {
             // index elementa  (idx * velikost tipa)
             BinopExpr index = new BinopExpr((IRExpr) rightExpr, new ConstantExpr(arrType.sizeInBytes()), BinopExpr.Operator.MUL);
 
-            // levi del more biti spremenljivka (globalna - Mem, lokalna - Mem, parameter - Binop)
-            if (!(leftExpr instanceof MemExpr))
-                return;
+            if (leftExpr instanceof MemExpr memExpr) {  // Tabela parameter
 
-            // naslov tabele + index elementa
-            BinopExpr arrElement = new BinopExpr(
-                    ((MemExpr) leftExpr).expr,
-                    index,
-                    BinopExpr.Operator.ADD);
+                // Naslov notranje / "child" tabele se ne nahaja v pomnilniku
+                // Naslov zunanje / "parent" tabele se nahaja v pomnilniku
+                boolean isInnerArray = (binary.left instanceof Binary leftBinary
+                        && leftBinary.operator == Binary.Operator.ARR);
 
-            imcCode.store(new MemExpr(arrElement), binary);
+                BinopExpr arrayElementAddress = new BinopExpr(
+                        (isInnerArray) ? memExpr.expr : memExpr,
+                        index,
+                        BinopExpr.Operator.ADD
+                );
+                MemExpr arrayElementValue = new MemExpr(arrayElementAddress);
+                imcCode.store(arrayElementValue, binary);
+
+            } else if (leftExpr instanceof BinopExpr arrayAddress) { //  Tabela - lokalna
+                BinopExpr arrayElementAddress = new BinopExpr(
+                        arrayAddress,
+                        index,
+                        BinopExpr.Operator.ADD
+                );
+                MemExpr arrayElementValue = new MemExpr(arrayElementAddress);
+                imcCode.store(arrayElementValue, binary);
+
+            } else if (leftExpr instanceof NameExpr arrayAddress) { // Tabele - globalna
+                BinopExpr arrayElementAddress = new BinopExpr(
+                        arrayAddress,
+                        index,
+                        BinopExpr.Operator.ADD
+                );
+                MemExpr arrayElementValue = new MemExpr(arrayElementAddress);
+                imcCode.store(arrayElementValue, binary);
+            }
 
         } else {
             BinopExpr.Operator operator = BinopExpr.Operator.valueOf(binary.operator.name());
@@ -215,7 +227,6 @@ public class IRCodeGenerator implements Visitor {
         // Vmesna koda za pogoj (counter < high)
         IRNode high = getIRNode(forLoop.high);
         BinopExpr condition = new BinopExpr((IRExpr) counter, (IRExpr) high, BinopExpr.Operator.LT);
-
         CJumpStmt cJumpStmtL1L2 = new CJumpStmt(condition, l1.label, l2.label);
 
 
@@ -231,8 +242,7 @@ public class IRCodeGenerator implements Visitor {
         // Vmesna koda za skok na pogoj
         JumpStmt jumpStmtL3 = new JumpStmt(l3.label);
 
-
-        // Shranimo vmesno kodo (MOVE COUNTER, L3, CJUMP L1L2, L1, BODY, UPDATE COUNTER, JMP L3, L2)
+        // Shranimo vmesno kodo (MOVE COUNTER, L3, CJUMP (L1,L2), L1, BODY, UPDATE COUNTER, JMP L3, L2)
         List<IRStmt> statements = new ArrayList<>();
         statements.add(moveCounter);
         statements.add(l3);
@@ -250,45 +260,74 @@ public class IRCodeGenerator implements Visitor {
     public void visit(Name name) {
         // Dobimo definicijo spremenljivke
         Def nameDef = getDef(name);
-
         // Dobimo dostop do spremenljivke
         Access nameAccess = getAccess(nameDef);
+        // Dobimo tip spremenljivke
+        Type nameType = getType(name);
 
         // Hendlamo spremenljivko glede na dostop
         if (nameAccess instanceof Access.Global global) {
 
             NameExpr nameExpr = new NameExpr(global.label);
-            MemExpr memExpr = new MemExpr(nameExpr);
-            imcCode.store(memExpr, name);
+            imcCode.store(
+                    (nameType.isArray()) ? nameExpr : new MemExpr(nameExpr),
+                    name
+            );
 
         } else if (nameAccess instanceof Access.Parameter parameter) {
 
-            NameExpr nameExpr = NameExpr.FP();
-            ConstantExpr constantExpr = new ConstantExpr(parameter.offset);
-            BinopExpr binopExpr = new BinopExpr(nameExpr, constantExpr, BinopExpr.Operator.ADD);
-            MemExpr memExpr = new MemExpr(binopExpr);
-            imcCode.store(memExpr, name);
+            int diff = Math.abs(currFrame.staticLevel - parameter.staticLevel);
+            if (diff == 0) {
+                NameExpr framePointer = NameExpr.FP();
+                ConstantExpr paramOffset = new ConstantExpr(parameter.offset);
+                BinopExpr paramAddress = new BinopExpr(framePointer, paramOffset, BinopExpr.Operator.ADD);
+                MemExpr paramValue = new MemExpr(paramAddress);
+
+                imcCode.store(paramValue, name);
+
+            } else {
+                // Dodajamo mem-e (od 1 naprej -> new MemExpr(nameExpr))
+                NameExpr framePointer = NameExpr.FP();
+                MemExpr memExpr = new MemExpr(framePointer);
+                for (int i = 1; i < diff; i++)
+                    memExpr = new MemExpr(memExpr);
+
+                ConstantExpr paramOffset = new ConstantExpr(parameter.offset);
+                BinopExpr paramAddress = new BinopExpr(memExpr, paramOffset, BinopExpr.Operator.ADD);
+                MemExpr paramValue = new MemExpr(paramAddress);
+
+                imcCode.store(paramValue, name);
+            }
 
         } else if (nameAccess instanceof Access.Local local) {
 
-            // Dodajamo mem-e
             int diff = Math.abs(currFrame.staticLevel - local.staticLevel);
-
             if (diff == 0) {
-                ConstantExpr constantExpr = new ConstantExpr(local.offset);
-                NameExpr nameExpr = NameExpr.FP();
-                BinopExpr binopExpr = new BinopExpr(nameExpr, constantExpr, BinopExpr.Operator.ADD);
-                imcCode.store(new MemExpr(binopExpr), name);
+                NameExpr framePointer = NameExpr.FP();
+                ConstantExpr locOffset = new ConstantExpr(local.offset);
+                BinopExpr locAddress = new BinopExpr(framePointer, locOffset, BinopExpr.Operator.ADD);
+                MemExpr locValue = new MemExpr(locAddress);
+
+                imcCode.store(
+                        (nameType.isArray()) ? locAddress : locValue,
+                        name
+                );
 
             } else {
-                NameExpr nameExpr = NameExpr.FP();
-                MemExpr memExpr = null;
-                for (int i = 0; i < diff; i++)
-                    memExpr = new MemExpr(nameExpr);
+                // Dodajamo mem-e (od 1 naprej -> new MemExpr(nameExpr))
+                NameExpr framePointer = NameExpr.FP();
+                MemExpr memExpr = new MemExpr(framePointer);
+                for (int i = 1; i < diff; i++)
+                    memExpr = new MemExpr(memExpr);
 
-                ConstantExpr constantExpr = new ConstantExpr(local.offset);
-                BinopExpr binopExpr = new BinopExpr(memExpr, constantExpr, BinopExpr.Operator.ADD);
-                imcCode.store(new MemExpr(binopExpr), name);
+                ConstantExpr locOffset = new ConstantExpr(local.offset);
+                BinopExpr locAddress = new BinopExpr(memExpr, locOffset, BinopExpr.Operator.ADD);
+                MemExpr locValue = new MemExpr(locAddress);
+
+                imcCode.store(
+                        (nameType.isArray()) ? locAddress : locValue,
+                        name
+                );
             }
         }
     }
@@ -304,7 +343,6 @@ public class IRCodeGenerator implements Visitor {
 
         // Vmesna koda pogoja
         IRNode condition = getIRNode(ifThenElse.condition);
-
         CJumpStmt cJumpStmtL1L2 = new CJumpStmt((IRExpr) condition, l1.label, l2.label);
 
         // Vmesna koda then
@@ -334,11 +372,11 @@ public class IRCodeGenerator implements Visitor {
     public void visit(Literal literal) {
         // Globalno shranimo string z labelo
         if (literal.type == Atom.Type.STR) {
-            Label l = Label.nextAnonymous();
-            accesses.store(new Access.Global(Constants.WordSize, l), literal);
+            Label label = Label.nextAnonymous();
+            accesses.store(new Access.Global(Constants.WordSize, label), literal);
             Access access = getAccess(literal);
             chunks.add(new Chunk.DataChunk((Access.Global) access, literal.value));
-            imcCode.store(new NameExpr(l), literal);
+            imcCode.store(new NameExpr(label), literal);
             return;
         }
 
@@ -354,16 +392,16 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Unary unary) {
-        IRNode expr = getIRNode(unary.expr);
+        IRNode expression = getIRNode(unary.expr);
 
         if (unary.operator == Unary.Operator.ADD) // Če je predznak plus pustimo konstanto
-            imcCode.store(expr, unary);
+            imcCode.store(expression, unary);
         else if (unary.operator == Unary.Operator.SUB) { // Če je predznak minus zapišemo kot (CONST(0) - CONST(value))
-            BinopExpr binopExpr = new BinopExpr(new ConstantExpr(0), (IRExpr) expr, BinopExpr.Operator.SUB);
-            imcCode.store(binopExpr, unary);
-        } else { // Če je predznak negacija zapišemo obrnemo vrednost iz 0 v 1 ali obratno
-            ConstantExpr constantExprNegated = new ConstantExpr((((ConstantExpr) expr).constant == 1) ? 0 : 1);
-            imcCode.store(constantExprNegated, unary);
+            BinopExpr negative = new BinopExpr(new ConstantExpr(0), (IRExpr) expression, BinopExpr.Operator.SUB);
+            imcCode.store(negative, unary);
+        } else { // Če je predznak negacija zapišemo obrnemo vrednost iz 0 v 1 ali obratno (1 - input)
+            BinopExpr negated = new BinopExpr(new ConstantExpr(1), (IRExpr) expression, BinopExpr.Operator.SUB);
+            imcCode.store(negated, unary);
         }
     }
 
@@ -376,7 +414,6 @@ public class IRCodeGenerator implements Visitor {
 
         // Vmesna koda za pogoj
         IRNode condition = getIRNode(whileLoop.condition);
-
         CJumpStmt cJumpStmtL1L2 = new CJumpStmt((IRExpr) condition, l1.label, l2.label);
 
         // Vmesna koda telesa while stavka
@@ -385,8 +422,7 @@ public class IRCodeGenerator implements Visitor {
         // Vmesna koda za labelo, ki skoči na začetek zanke
         JumpStmt jumpL3 = new JumpStmt(l3.label);
 
-
-        // Shranimo vmesno kodo za while zanko (L3, CJUMP L1L2, L1, BODY, JUMP L3, L2)
+        // Shranimo vmesno kodo za while zanko (L3, CJUMP (L1,L2), L1, BODY, JUMP L3, L2)
         List<IRStmt> statements = new ArrayList<>();
         statements.add(l3);
         statements.add(cJumpStmtL1L2);
@@ -428,9 +464,9 @@ public class IRCodeGenerator implements Visitor {
         IRNode funCode = getIRNode(funDef.body);
 
         // naredimo še MOVE del in vmesno kodo shranimo
-        NameExpr nameExpr = NameExpr.FP();
-        MemExpr memExpr = new MemExpr(nameExpr);
-        MoveStmt moveStmt = new MoveStmt(memExpr, (IRExpr) funCode);
+        NameExpr framePointer = NameExpr.FP();
+        MemExpr fpValue = new MemExpr(framePointer);
+        MoveStmt moveStmt = new MoveStmt(fpValue, (IRExpr) funCode);
         chunks.add(new Chunk.CodeChunk(funFrame, moveStmt));
 
         currFrame = oldFrame;
@@ -469,13 +505,13 @@ public class IRCodeGenerator implements Visitor {
         List<IRExpr> arguments = new ArrayList<>();
         arguments.add(NameExpr.FP());
 
-        IRNode irNode;
-        for (Expr argument : call.arguments) {
-            irNode = getIRNode(argument);
-            arguments.add((IRExpr) irNode);
-        }
+        for (Expr argument : call.arguments)
+            arguments.add((IRExpr) getIRNode(argument));
 
-        imcCode.store(new CallExpr(Label.named(call.name), arguments), call);
+        imcCode.store(
+                new CallExpr(Label.named(call.name), arguments),
+                call
+        );
     }
 
     private IRNode getIRNode(Ast ast) {

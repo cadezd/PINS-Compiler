@@ -66,7 +66,6 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Binary binary) {
-        // TODO rewrite
         if (binary.operator.equals(Binary.Operator.ARR) && binary.left instanceof Name name) {
             Optional<Def> link = symbolTable.definitionFor(name.name);
 

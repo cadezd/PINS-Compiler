@@ -1,12 +1,14 @@
-var ar: arr[12] integer;
+fun main(arg: integer) : integer = (
+    {tab[0][0] = 1},
+    {tab[0][1] = 2},
+    {tab[0][2] = 3},
+    print_arr(tab),
+    9999
+) {where var tab: arr[3] arr[3] integer};
 
-fun main(x : integer) : integer = (
-    {for i = 1, 12, 1: (
-        {ar[i] = i}
-    )},
+fun print_arr(tab: arr[3] arr[3] integer) : integer = (
+    g(tab[0][0]),
+    9999
+);
 
-    {for i = 0, 12, 1: (
-        print_int(ar[i])
-    )},
-    0
-) {where var i: integer}
+fun g(x: integer) : integer = x

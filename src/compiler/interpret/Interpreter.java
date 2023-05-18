@@ -10,14 +10,11 @@ import static common.RequireNonNull.requireNonNull;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 import common.Constants;
 import compiler.frm.Frame;
+import compiler.gen.Memory;
 import compiler.gen.Memory;
 import compiler.ir.chunk.Chunk.CodeChunk;
 import compiler.ir.code.IRNode;
@@ -64,13 +61,17 @@ public class Interpreter {
     // --------- izvajanje navideznega stroja ----------
 
     public void interpret(CodeChunk chunk) {
-        memory.stM(framePointer + Constants.WordSize, 999); // argument v funkcijo main
+        memory.stM(framePointer + Constants.WordSize, 0); // argument v funkcijo main
         memory.stM(framePointer - chunk.frame.oldFPOffset(), framePointer); // oldFP
         internalInterpret(chunk, new HashMap<>());
     }
 
     private void internalInterpret(CodeChunk chunk, Map<Frame.Temp, Object> temps) {
-        // @TODO: Nastavi FP in SP na nove vrednosti!
+        // Nastavi FP in SP na nove vrednosti
+        int oldFP = framePointer;
+        int odlSP = stackPointer;
+        framePointer = stackPointer;
+        stackPointer -= chunk.frame.size();
 
         Object result = null;
         if (chunk.code instanceof SeqStmt seq) {
@@ -90,7 +91,9 @@ public class Interpreter {
             throw new RuntimeException("Linearize IR!");
         }
 
-        // @TODO: Ponastavi FP in SP na stare vrednosti!
+        // Ponastavi FP in SP na stare vrednosti
+        framePointer = oldFP;
+        stackPointer = odlSP;
     }
 
     private Object execute(IRStmt stmt, Map<Frame.Temp, Object> temps) {
@@ -110,19 +113,35 @@ public class Interpreter {
     }
 
     private Object execute(CJumpStmt cjump, Map<Frame.Temp, Object> temps) {
-        throw new UnsupportedOperationException("Unimplemented method 'execute'");
+        boolean condition = toBool(execute(cjump.condition, temps));    // Vrednost pogoja
+        return (condition) ?
+                execute(new JumpStmt(cjump.thenLabel), temps) :         // Če je TRUE -> skoči na THEN
+                execute(new JumpStmt(cjump.elseLabel), temps);          // Če je FALSE -> skoči na ELSE
     }
 
     private Object execute(ExpStmt exp, Map<Frame.Temp, Object> temps) {
-        throw new UnsupportedOperationException("Unimplemented method 'execute'");
+        return execute(exp.expr, temps);
     }
 
     private Object execute(JumpStmt jump, Map<Frame.Temp, Object> temps) {
-        throw new UnsupportedOperationException("Unimplemented method 'execute'");
+        return jump.label;
     }
 
     private Object execute(MoveStmt move, Map<Frame.Temp, Object> temps) {
-        throw new UnsupportedOperationException("Unimplemented method 'execute'");
+        Object object = execute(move.src, temps);
+        Integer value = (object == null) ? 0 : toInt(object);    // Vredenost
+
+        if (move.dst instanceof TempExpr tempExpr) {
+            temps.put(tempExpr.temp, value);
+            return temps.get(tempExpr.temp);
+        }
+
+        int address = (move.dst instanceof MemExpr memExpr) ?
+                toInt(execute(memExpr.expr, temps)) :   // Če je MEM ga preskoči (da shrani naslov, ne pa vrednost)
+                toInt(execute(move.dst, temps));        // Če je naslov ga shrani
+
+        memory.stM(address, value);
+        return memory.ldM(address);
     }
 
     private Object execute(IRExpr expr, Map<Frame.Temp, Object> temps) {
@@ -146,7 +165,27 @@ public class Interpreter {
     }
 
     private Object execute(BinopExpr binop, Map<Frame.Temp, Object> temps) {
-        throw new UnsupportedOperationException("Unimplemented method 'execute'");
+        Integer leftInt = toInt(execute(binop.lhs, temps));
+        Integer rightInt = toInt(execute(binop.rhs, temps));
+
+        int result = 0;
+        switch (binop.op) {
+            case ADD -> result = leftInt + rightInt;
+            case SUB -> result = leftInt - rightInt;
+            case MUL -> result = leftInt * rightInt;
+            case DIV -> result = leftInt / rightInt;
+            case MOD -> result = leftInt % rightInt;
+            case EQ -> result = (leftInt.equals(rightInt)) ? 1 : 0;
+            case NEQ -> result = (!leftInt.equals(rightInt)) ? 1 : 0;
+            case GT -> result = (leftInt > rightInt) ? 1 : 0;
+            case GEQ -> result = (leftInt >= rightInt) ? 1 : 0;
+            case LT -> result = (leftInt < rightInt) ? 1 : 0;
+            case LEQ -> result = (leftInt <= rightInt) ? 1 : 0;
+            case AND -> result = (leftInt == 1 && rightInt == 1) ? 1 : 0;
+            case OR -> result = (leftInt == 0 && rightInt == 0) ? 0 : 1;
+        }
+
+        return result;
     }
 
     private Object execute(CallExpr call, Map<Frame.Temp, Object> temps) {
@@ -187,30 +226,40 @@ public class Interpreter {
             random = new Random(seed);
             return null;
         } else if (memory.ldM(call.label) instanceof CodeChunk chunk) {
-            // ...
-            // internalInterpret(chunk, new HashMap<>())
-            //                          ~~~~~~~~~~~~~ 'lokalni registri'
-            // ...
-            throw new UnsupportedOperationException("Unimplemented method 'execute'");
+            // Pripravimo argumente za naslednjo funkcijo (od SP navzgor)
+            int sp = stackPointer;
+            for (IRExpr argument : call.args) {
+                memory.stM(sp, temps.get(((TempExpr) argument).temp));
+                sp += Constants.WordSize;
+            }
+
+            internalInterpret(chunk, new HashMap<>());  // Izvedemo naslednjo funkcijo
+            return memory.ldM(stackPointer);            // Vrnemo rezultat izvedene funkcije
         } else {
             throw new RuntimeException("Only functions can be called!");
         }
     }
 
     private Object execute(ConstantExpr constant) {
-        throw new UnsupportedOperationException("Unimplemented method 'execute'");
+        return constant.constant;
     }
 
     private Object execute(MemExpr mem, Map<Frame.Temp, Object> temps) {
-        throw new UnsupportedOperationException("Unimplemented method 'execute'");
+        int address = toInt(execute(mem.expr, temps));
+        return memory.ldM(address);
     }
 
     private Object execute(NameExpr name) {
-        throw new UnsupportedOperationException("Unimplemented method 'execute'");
+        if (name.label.name.equals(Constants.framePointer))
+            return framePointer;
+        else if (name.label.name.equals(Constants.stackPointer))
+            return stackPointer;
+        else
+            return memory.address(name.label);
     }
 
     private Object execute(TempExpr temp, Map<Frame.Temp, Object> temps) {
-        throw new UnsupportedOperationException("Unimplemented method 'execute'");
+        return temps.get(temp.temp);
     }
 
     // ----------- pomožne funkcije -----------
