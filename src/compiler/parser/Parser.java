@@ -109,13 +109,14 @@ public class Parser {
         if (!check(IDENTIFIER))
             Report.error(getSymbol().position, "PINS error: <identifier> expected");
         dump("function_definition -> fun identifier \"(\" parameters \")\" \":\" type \"=\" expression");
-        Symbol funIdentifier = skip();
+
+        Symbol funIdentifier = skip(); // identifier
 
         if (!check(OP_LPARENT))
             Report.error(getSymbol().position, "PINS error: '(' expected");
         skip();
 
-        List<FunDef.Parameter> funParameters = parseParameters();
+        List<FunDef.Parameter> funParameters = parseParameters(); // parameters
 
         if (!check(OP_RPARENT))
             Report.error(getSymbol().position, "PINS error: ')' expected");
@@ -125,19 +126,20 @@ public class Parser {
             Report.error(getSymbol().position, "PINS error: ':' expected");
         skip();
 
-        Type funType = parseType();
+        Type funType = parseType(); // return type
 
         if (!check(OP_ASSIGN))
             Report.error(getSymbol().position, "PINS error: '=' expected");
         skip();
 
-        Expr funExpression = parseExpression();
+        Expr funBody = parseExpression(); // body
+
         return new FunDef(
-                new Position(startSymbol.position.start, funExpression.position.end),
+                new Position(startSymbol.position.start, funBody.position.end),
                 funIdentifier.lexeme,
                 funParameters,
                 funType,
-                funExpression
+                funBody
         );
     }
 
@@ -156,7 +158,7 @@ public class Parser {
                 Report.error(getSymbol().position, "PINS error: WHERE keyword expected");
             skip();
 
-            Defs definitions = parseDefinitions();
+            Defs definitions = parseDefinitions(); // definitions
 
             if (!check(OP_RBRACE))
                 Report.error(getSymbol().position, "PINS error: '}' expected");
@@ -167,6 +169,7 @@ public class Parser {
                     leftExpression,
                     definitions
             );
+
         } else {
             dump("expression1 -> epsylon");
             return leftExpression;
@@ -183,14 +186,18 @@ public class Parser {
         if (check(OP_OR)) {
             dump("logical_ior_expression1 -> \"|\" logical_ior_expression");
             skip();
+
             Expr rightExpression = parseLogicalANDExpression();
+
             Expr binary = new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
                     Binary.Operator.OR,
                     rightExpression
             );
+
             return parseLogicalIORExpression1(binary);
+
         } else {
             dump("logical_ior_expression1 -> epsylon");
             return leftExpression;
@@ -208,15 +215,17 @@ public class Parser {
         if (check(OP_AND)) {
             dump("logical_and_expression1 -> \"&\" logical_and_expression");
             skip();
+
             Expr rightExpression = parseCompareExpression();
+
             Expr binary = new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
                     Binary.Operator.AND,
                     rightExpression
             );
-            return parseLogicalANDExpression1(binary);
 
+            return parseLogicalANDExpression1(binary);
         } else {
             dump("logical_and_expression1 -> epsylon");
             return leftExpression;
@@ -233,7 +242,9 @@ public class Parser {
         if (check(OP_EQ)) {
             dump("compare_expression1 -> \"==\" additive_expression");
             skip();
+
             Expr rightExpression = parseAdditiveExpression();
+
             return new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
@@ -244,7 +255,9 @@ public class Parser {
         } else if (check(OP_NEQ)) {
             dump("compare_expression1 -> \"!=\" additive_expression");
             skip();
+
             Expr rightExpression = parseAdditiveExpression();
+
             return new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
@@ -255,7 +268,9 @@ public class Parser {
         } else if (check(OP_LEQ)) {
             dump("compare_expression1 -> \"<=\" additive_expression");
             skip();
+
             Expr rightExpression = parseAdditiveExpression();
+
             return new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
@@ -266,7 +281,9 @@ public class Parser {
         } else if (check(OP_GEQ)) {
             dump("compare_expression1 -> \">=\" additive_expression");
             skip();
+
             Expr rightExpression = parseAdditiveExpression();
+
             return new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
@@ -277,7 +294,9 @@ public class Parser {
         } else if (check(OP_LT)) {
             dump("compare_expression1 -> \"<\" additive_expression");
             skip();
+
             Expr rightExpression = parseAdditiveExpression();
+
             return new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
@@ -288,7 +307,9 @@ public class Parser {
         } else if (check(OP_GT)) {
             dump("compare_expression1 -> \">\" additive_expression");
             skip();
+
             Expr rightExpression = parseAdditiveExpression();
+
             return new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
@@ -312,7 +333,9 @@ public class Parser {
         if (check(OP_ADD)) {
             dump("additive_expression1 -> \"+\" additive_expression");
             skip();
+
             Expr rightExpression = parseMultiplicativeExpression();
+
             Expr binary = new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
@@ -321,10 +344,13 @@ public class Parser {
             );
 
             return parseAdditiveExpression1(binary);
+
         } else if (check(OP_SUB)) {
             dump("additive_expression1 -> \"-\" additive_expression");
             skip();
+
             Expr rightExpression = parseMultiplicativeExpression();
+
             Expr binary = new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
@@ -333,6 +359,7 @@ public class Parser {
             );
 
             return parseAdditiveExpression1(binary);
+
         } else {
             dump("additive_expression1 -> epsylon");
             return leftExpression;
@@ -349,37 +376,46 @@ public class Parser {
         if (check(OP_MUL)) {
             dump("multiplicative_expression1 ->  \"*\" multiplicative_expression");
             skip();
+
             Expr rightExpression = parsePrefixExpression();
+
             Expr binary = new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
                     Binary.Operator.MUL,
                     rightExpression
             );
+
             return parseMultiplicativeExpression1(binary);
 
         } else if (check(OP_DIV)) {
             dump("multiplicative_expression1 ->  \"/\" multiplicative_expression");
             skip();
+
             Expr rightExpression = parsePrefixExpression();
+
             Expr binary = new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
                     Binary.Operator.DIV,
                     rightExpression
             );
+
             return parseMultiplicativeExpression1(binary);
 
         } else if (check(OP_MOD)) {
             dump("multiplicative_expression1 ->  \"%\" multiplicative_expression");
             skip();
+
             Expr rightExpression = parsePrefixExpression();
+
             Expr binary = new Binary(
                     new Position(leftExpression.position.start, rightExpression.position.end),
                     leftExpression,
                     Binary.Operator.MOD,
                     rightExpression
             );
+
             return parseMultiplicativeExpression1(binary);
 
         } else {
@@ -392,7 +428,9 @@ public class Parser {
         if (check(OP_ADD)) {
             dump("prefix_expression -> \"+\" prefix_expression");
             Symbol startSymbol = skip();
+
             Expr expression = parsePrefixExpression();
+
             return new Unary(
                     new Position(startSymbol.position.start, expression.position.end),
                     expression,
@@ -402,7 +440,9 @@ public class Parser {
         } else if (check(OP_SUB)) {
             dump("prefix_expression -> \"-\" prefix_expression");
             Symbol startSymbol = skip();
+
             Expr expression = parsePrefixExpression();
+
             return new Unary(
                     new Position(startSymbol.position.start, expression.position.end),
                     expression,
@@ -412,7 +452,9 @@ public class Parser {
         } else if (check(OP_NOT)) {
             dump("prefix_expression -> \"!\" prefix_expression");
             Symbol startSymbol = skip();
+
             Expr expression = parsePrefixExpression();
+
             return new Unary(
                     new Position(startSymbol.position.start, expression.position.end),
                     expression,
@@ -461,6 +503,7 @@ public class Parser {
         if (check(C_LOGICAL)) {
             dump("atom_expression -> log_constant");
             Symbol atmExprLogical = skip();
+
             return new Literal(
                     atmExprLogical.position,
                     atmExprLogical.lexeme,
@@ -470,6 +513,7 @@ public class Parser {
         } else if (check(C_INTEGER)) {
             dump("atom_expression -> int_constant");
             Symbol atmExprInteger = skip();
+
             return new Literal(
                     atmExprInteger.position,
                     atmExprInteger.lexeme,
@@ -479,6 +523,7 @@ public class Parser {
         } else if (check(C_STRING)) {
             dump("atom_expression -> str_constant");
             Symbol atmExprString = skip();
+
             return new Literal(
                     atmExprString.position,
                     atmExprString.lexeme,
@@ -488,6 +533,7 @@ public class Parser {
         } else if (check(IDENTIFIER)) {
             dump("atom_expression -> identifier identifier1");
             Symbol identifier = skip();
+
             return parseIdentifier1(identifier);
 
         } else if (check(OP_LPARENT)) {
@@ -533,8 +579,10 @@ public class Parser {
                     expressions,
                     identifier.lexeme
             );
+
         } else {
             dump("identifier1 -> epsylon");
+
             return new Name(
                     identifier.position,
                     identifier.lexeme
@@ -546,17 +594,21 @@ public class Parser {
         if (check(KW_IF)) {
             dump("other_atom_expressions -> if_else_expression if_then_else_expression");
             skip();
+
             IfThenElse ifThen = parseIfElseExpression(startSymbol);
+
             return parseIfThenElseExpression(ifThen);
 
         } else if (check(KW_WHILE)) {
             dump("other_atom_expressions ->  while_expression ");
             skip();
+
             return parseWhileExpression(startSymbol);
 
         } else if (check(KW_FOR)) {
             dump("other_atom_expressions -> for_expression");
             skip();
+
             return parseForExpression(startSymbol);
 
         } else {
@@ -584,6 +636,7 @@ public class Parser {
 
     private IfThenElse parseIfElseExpression(Symbol startSymbol) {
         dump("if_else_expression -> if expression then expression");
+
         Expr condition = parseExpression();
 
         if (!check(KW_THEN))
@@ -602,6 +655,7 @@ public class Parser {
         if (check(KW_ELSE)) {
             dump("if_then_else_expression -> else expression \"}\"");
             skip();
+
             Expr elseExpression = parseExpression();
 
             if (!check(OP_RBRACE))
@@ -710,7 +764,9 @@ public class Parser {
         if (check(OP_COMMA)) {
             dump("expressions1 -> \",\" expressions");
             skip();
+
             expressions.add(parseExpression());
+
             parseExpressions1(expressions);
         } else {
             dump("expressions1 -> epsylon");
@@ -722,7 +778,9 @@ public class Parser {
         dump("parameters -> parameter parameters1");
         List<FunDef.Parameter> parameters = new ArrayList<>();
         parameters.add(parseParameter());
+
         parseParameters1(parameters);
+
         return parameters;
     }
 
@@ -730,7 +788,9 @@ public class Parser {
         if (check(OP_COMMA)) {
             dump("parameters1 ->  \",\" parameters");
             skip();
+
             parameters.add(parseParameter());
+
             parseParameters1(parameters);
         } else {
             dump("parameters1 -> epsylon");
@@ -740,7 +800,9 @@ public class Parser {
     private FunDef.Parameter parseParameter() {
         if (!check(IDENTIFIER))
             Report.error(getSymbol().position, "PINS error: <identifier> expected");
+
         dump("parameter -> identifier \":\" type ");
+
         Symbol parIdentifier = skip();
 
         if (!check(OP_COLON))
@@ -759,7 +821,9 @@ public class Parser {
     private Def parseVariableDefinition(Symbol startSymbol) {
         if (!check(IDENTIFIER))
             Report.error(getSymbol().position, "PINS error: <identifier> expected");
+
         dump("variable_definition -> var identifier \":\" type");
+
         Symbol varIdentifier = skip();
 
         if (!check(OP_COLON))
@@ -778,7 +842,9 @@ public class Parser {
     private Def parseTypeDefinition(Symbol startSymbol) {
         if (!check(IDENTIFIER))
             Report.error(getSymbol().position, "PINS error: <identifier> expected");
+
         dump("type_definition -> typ identifier \":\" type");
+
         Symbol typIdentifier = skip();
 
         if (!check(OP_COLON))
@@ -798,21 +864,25 @@ public class Parser {
         if (check(IDENTIFIER)) {
             dump("type -> identifier");
             Symbol symbol = skip();
+
             return new TypeName(symbol.position, symbol.lexeme);
 
         } else if (check(AT_LOGICAL)) {
             dump("type -> logical");
             Symbol symbol = skip();
+
             return Atom.LOG(symbol.position);
 
         } else if (check(AT_INTEGER)) {
             dump("type -> integer");
             Symbol symbol = skip();
+
             return Atom.INT(symbol.position);
 
         } else if (check(AT_STRING)) {
             dump("type -> string");
             Symbol symbol = skip();
+
             return Atom.STR(symbol.position);
 
         } else if (check(KW_ARR)) {
@@ -828,6 +898,7 @@ public class Parser {
                     Report.error(getSymbol().position, "PINS error: negative array dimension");
                 else
                     Report.error(getSymbol().position, "PINS error: array dimension missing");
+
             Symbol arraySize = skip();
 
             if (!check(OP_RBRACKET))
