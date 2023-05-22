@@ -336,10 +336,10 @@ public class Lexer {
                     if (c >= '0' && c <= '9') {
                         lexeme.append(c);
                         state = 31; // loops until there are numbers
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 32;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 32;
                     }
                 }
@@ -357,16 +357,16 @@ public class Lexer {
                 case 34 -> {
                     char c = charStream.nextChar();
 
-                    if (c == 'r') {
+                    if (c == 'r') { // tr
                         lexeme.append(c);
                         state = 35;
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 99;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 99;
                     }
                 }
@@ -374,16 +374,16 @@ public class Lexer {
                 case 35 -> {
                     char c = charStream.nextChar();
 
-                    if (c == 'u') {
+                    if (c == 'u') { // tru
                         lexeme.append(c);
                         state = 36;
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 99;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 99;
                     }
                 }
@@ -391,30 +391,30 @@ public class Lexer {
                 case 36 -> {
                     char c = charStream.nextChar();
 
-                    if (c == 'e') {
+                    if (c == 'e') { // true
                         lexeme.append(c);
                         state = 37;
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 99;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 99;
                     }
                 }
 
-                case 37 -> {
+                case 37 -> { // true or identifier
                     char c = charStream.nextChar();
 
                     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 38;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 38;
                     }
                 }
@@ -428,16 +428,16 @@ public class Lexer {
                 case 39 -> {
                     char c = charStream.nextChar();
 
-                    if (c == 'a') {
+                    if (c == 'a') { // fa
                         lexeme.append(c);
                         state = 40;
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 99;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 99;
                     }
                 }
@@ -445,16 +445,16 @@ public class Lexer {
                 case 40 -> {
                     char c = charStream.nextChar();
 
-                    if (c == 'l') {
+                    if (c == 'l') { // fal
                         lexeme.append(c);
                         state = 41;
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 99;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 99;
                     }
                 }
@@ -462,16 +462,16 @@ public class Lexer {
                 case 41 -> {
                     char c = charStream.nextChar();
 
-                    if (c == 's') {
+                    if (c == 's') { // fals
                         lexeme.append(c);
                         state = 42;
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 99;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 99;
                     }
                 }
@@ -479,30 +479,30 @@ public class Lexer {
                 case 42 -> {
                     char c = charStream.nextChar();
 
-                    if (c == 'e') {
+                    if (c == 'e') { // false
                         lexeme.append(c);
                         state = 43;
                     } else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 99;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 99;
                     }
                 }
 
-                case 43 -> {
+                case 43 -> { // false or identifier
                     char c = charStream.nextChar();
 
                     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 44;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 44;
                     }
                 }
@@ -520,14 +520,14 @@ public class Lexer {
                 case 45 -> {
                     char c = charStream.nextChar();
 
-                    if (c == '\'') {
+                    if (c == '\'') { // closed string literal or '' (quotation marks)
                         lexeme.append(c);
                         state = 46;
                     } else if (c >= ' ' && c <= '~') {
                         lexeme.append(c);
                         state = 45;
                     } else {
-                        //  handle exception: invalid character or unclosed string literal
+                        // exception: invalid character or unclosed string literal
                         if (c == '\t' | c == '\r' | c == '\n' || c == '\0')
                             handleError(charStream, lexeme.toString(), "PINS error: unclosed string literal", 0);
                         else
@@ -538,18 +538,18 @@ public class Lexer {
                 case 46 -> {
                     char c = charStream.nextChar();
 
-                    if (c == '\'') {
+                    if (c == '\'') { // '' (quotation marks)
                         lexeme.append(c);
                         state = 45;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') {  // to avoid infinite loop
                         state = 47;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 47;
                     }
                 }
 
-                case 47 -> {
+                case 47 -> { // closed string literal
                     symbol = getSymbol(lexeme.toString(), C_STRING, charStream);
                     addSymbolToListAndClearLexeme(symbol, symbols, lexeme);
                     state = 0;
@@ -585,16 +585,21 @@ public class Lexer {
                     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
                         state = 98;
-                    } else if (c == '\0') {
+                    } else if (c == '\0') { // to avoid infinite loop
                         state = 99;
                     } else {
-                        charStream.back();
+                        charStream.back(); // one char back
                         state = 99;
                     }
                 }
 
                 case 99 -> {
-                    symbol = getSymbol(lexeme.toString(), this.keywordMapping.getOrDefault(lexeme.toString(), IDENTIFIER), charStream);
+                    symbol = getSymbol( // keyword or identifier
+                            lexeme.toString(),
+                            this.keywordMapping.getOrDefault(lexeme.toString(), IDENTIFIER),
+                            charStream
+                    );
+
                     addSymbolToListAndClearLexeme(symbol, symbols, lexeme);
                     state = 0;
                 }
@@ -643,9 +648,17 @@ public class Lexer {
         int endColumn = charStream.getColumn();
 
         if (type == C_STRING) {
-            return new Symbol(new Position(endLine, endColumn - lexeme.length(), endLine, endColumn), type, lexeme.substring(1, lexeme.length() - 1).replace("''", "'"));
+            return new Symbol(
+                    new Position(endLine, endColumn - lexeme.length(), endLine, endColumn),
+                    type,
+                    lexeme.substring(1, lexeme.length() - 1).replace("''", "'")
+            );
         }
 
-        return new Symbol(new Position(endLine, endColumn - lexeme.length(), endLine, endColumn), type, lexeme);
+        return new Symbol(
+                new Position(endLine, endColumn - lexeme.length(), endLine, endColumn),
+                type,
+                lexeme
+        );
     }
 }
