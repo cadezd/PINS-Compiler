@@ -410,7 +410,7 @@ public class Lexer {
 
                     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
-                        state = 98;
+                        state = 98; // identifier
                     } else if (c == '\0') { // to avoid infinite loop
                         state = 38;
                     } else {
@@ -498,7 +498,7 @@ public class Lexer {
 
                     if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '_')) {
                         lexeme.append(c);
-                        state = 98;
+                        state = 98; // identifier
                     } else if (c == '\0') { // to avoid infinite loop
                         state = 44;
                     } else {
@@ -525,7 +525,7 @@ public class Lexer {
                         state = 46;
                     } else if (c >= ' ' && c <= '~') {
                         lexeme.append(c);
-                        state = 45;
+                        state = 45; // loops until there are characters
                     } else {
                         // exception: invalid character or unclosed string literal
                         if (c == '\t' | c == '\r' | c == '\n' || c == '\0')
@@ -538,18 +538,18 @@ public class Lexer {
                 case 46 -> {
                     char c = charStream.nextChar();
 
-                    if (c == '\'') { // '' (quotation marks)
+                    if (c == '\'') {
                         lexeme.append(c);
-                        state = 45;
+                        state = 45;          // '' (quotation marks)
                     } else if (c == '\0') {  // to avoid infinite loop
-                        state = 47;
+                        state = 47;          // closed string literal
                     } else {
                         charStream.back(); // one char back
                         state = 47;
                     }
                 }
 
-                case 47 -> { // closed string literal
+                case 47 -> {
                     symbol = getSymbol(lexeme.toString(), C_STRING, charStream);
                     addSymbolToListAndClearLexeme(symbol, symbols, lexeme);
                     state = 0;
@@ -564,7 +564,7 @@ public class Lexer {
 
                     if (!(c == '\r' || c == '\n' || c == '\0')) {
                         lexeme.append(c);
-                        state = 48;
+                        state = 48; // loops to end of line or EOF
                     } else {
                         state = 49;
                     }
