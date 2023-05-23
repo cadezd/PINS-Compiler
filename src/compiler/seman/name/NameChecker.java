@@ -46,22 +46,20 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Call call) {
-        // visiting all arguments
         for (Expr arg : call.arguments)
             navigate(arg);
 
+        // Standard library
         if (Constants.stdLibrary.containsKey(call.name))
             return;
 
-        // linking function call with its definition
-        Optional<Def> link = symbolTable.definitionFor(call.name);
-
-        if (link.isEmpty())
+        Optional<Def> funDef = symbolTable.definitionFor(call.name);
+        if (funDef.isEmpty())
             Report.error(call.position, "PINS error: function " + call.name + " is not defined");
-        else if (!(link.get() instanceof FunDef))
+        else if (!(funDef.get() instanceof FunDef))
             Report.error(call.position, "PINS error: " + call.name + " is not a function");
         else
-            definitions.store(link.get(), call);
+            definitions.store(funDef.get(), call);
     }
 
     @Override
@@ -123,8 +121,7 @@ public class NameChecker implements Visitor {
         navigate(ifThenElse.thenExpression);
 
         // visiting else expression (if present)
-        if (ifThenElse.elseExpression.isPresent())
-            navigate(ifThenElse.elseExpression.get());
+        ifThenElse.elseExpression.ifPresent(this::navigate);
     }
 
     @Override
@@ -155,7 +152,7 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Defs defs) {
-        // BFS (first we add all definitions in symbol table)
+        // BFS (first we add all definitions in symbol table on current level)
         for (Def definition : defs.definitions) {
             if (definition instanceof VarDef varDef) {
                 addToSymbolTable(varDef, "PINS error: variable " + varDef.name + " is already defined");
@@ -172,7 +169,7 @@ public class NameChecker implements Visitor {
             }
         }
 
-        // DFS : (second we link definitions of types, variables, functions with their usages)
+        // DFS (second we link definitions of types, variables, functions with their usages on "sub-levels")
         for (Def definition : defs.definitions) {
             if (definition instanceof VarDef varDef) {
                 varDef.accept(this);
