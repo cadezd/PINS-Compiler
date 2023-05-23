@@ -1,14 +1,18 @@
 var data: arr[10] integer;
 
 fun find(elt: integer, low: integer, high: integer, tab: arr[10] integer) : integer = (
-    {middle = low + ((high - low) / 2)},
-    {if elt == tab[middle] then (
-        {rez = middle}
-    ) else { if elt < tab[middle] then (
-        {rez = find(elt, low, middle - 1, tab)}
+    {if low > high then (
+        {rez = -1}
     ) else (
-         {rez = find(elt, middle + 1, high, tab)}
-    )}},
+        {middle = low + ((high - low) / 2)},
+        {if elt == tab[middle] then (
+            {rez = middle}
+        ) else { if elt < tab[middle] then (
+            {rez = find(elt, low, middle - 1, tab)}
+        ) else (
+             {rez = find(elt, middle + 1, high, tab)}
+        )}}
+    )},
     rez
 ) {where var middle: integer; var rez: integer};
 
@@ -24,6 +28,6 @@ fun main(arg: integer) : integer = (
     {data[8] = 41},
     {data[9] = 42},
 
-    print_int(find(42, 0, 9, data)),
+    print_int(find(99, 0, 9, data)),
     0
 )

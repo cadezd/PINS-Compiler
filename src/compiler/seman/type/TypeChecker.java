@@ -46,12 +46,13 @@ public class TypeChecker implements Visitor {
 
     @Override
     public void visit(Call call) {
-        // Standardna knjižnica
+        // Standard library
         if (Constants.stdLibrary.containsKey(call.name)) {
             handelStdLibrary(call);
             return;
         }
 
+        // argument types
         for (Expr argument : call.arguments)
             argument.accept(this);
 
@@ -62,6 +63,7 @@ public class TypeChecker implements Visitor {
             argumentType.ifPresent(argumentTypes::add);
         }
 
+        // function type (arg1Typ, arg2Typ...) -> returnTyp
         Optional<Def> funDef = definitions.valueFor(call);
         if (funDef.isEmpty())
             return;
@@ -77,6 +79,7 @@ public class TypeChecker implements Visitor {
             if (function.isEmpty())
                 return;
 
+            // we make sure that types and number of arguments match function definition
             handleWrongNumberOfArguments(call, function.get().parameters);
             handleWrongArgumentTypes(function.get(), call);
 
@@ -96,46 +99,44 @@ public class TypeChecker implements Visitor {
             return;
 
         if (binary.operator.isAndOr()) {
+            // left expression must be LOG
             if (!leftExprType.get().isLog())
                 Report.error(binary.left.position, "PINS error: invalid type - expected 'log', got '" + leftExprType.get() + "'");
 
+            // right expression must be LOG
             if (!rightExprType.get().isLog())
                 Report.error(binary.left.position, "PINS error: invalid type - expected 'log', got '" + rightExprType.get() + "'");
 
             types.store(new Type.Atom(Type.Atom.Kind.LOG), binary);
 
         } else if (binary.operator.isArithmetic()) {
+            // left expression must be INT
             if (!leftExprType.get().isInt())
                 Report.error(binary.left.position, "PINS error: invalid type - expected 'int', got " + leftExprType.get() + "'");
 
+            // right expression must be INT
             if (!rightExprType.get().isInt())
                 Report.error(binary.left.position, "PINS error: invalid type - expected 'int', got " + rightExprType.get() + "'");
 
             types.store(new Type.Atom(Type.Atom.Kind.INT), binary);
 
         } else if (binary.operator.isComparison()) {
-
-            if (!leftExprType.get().equals(rightExprType.get())) // zagotovimo da sta tipa enaka
+            // we make sure that types are same
+            if (!leftExprType.get().equals(rightExprType.get()))
                 Report.error(binary.position, "PINS error: operator " + binary.operator + " cannot be applied to '" + leftExprType.get() + "', '" + rightExprType.get() + "'");
 
-            if (!leftExprType.get().isInt() && !leftExprType.get().isLog()) // zagotovimo da sta ali log ali int
+            // we make sure that types are LOG or INT
+            if (!leftExprType.get().isInt() && !leftExprType.get().isLog())
                 Report.error(binary.position, "PINS error: operator " + binary.operator + " cannot be applied to '" + leftExprType.get() + "', '" + rightExprType.get() + "'");
-
-            /*
-            if (!leftExprType.get().isInt() &&
-                    (binary.operator.equals(Binary.Operator.GT) ||
-                            binary.operator.equals(Binary.Operator.GEQ) ||
-                            binary.operator.equals(Binary.Operator.LT) ||
-                            binary.operator.equals(Binary.Operator.LEQ)))
-                Report.error(binary.position, "PINS error: operator " + binary.operator + " cannot be applied to '" + leftExprType.get() + "', '" + rightExprType.get() + "'");
-            */
 
             types.store(new Type.Atom(Type.Atom.Kind.LOG), binary);
 
         } else if (binary.operator.equals(Binary.Operator.ARR)) {
+            // left expression must be ARR
             if (!leftExprType.get().isArray())
                 Report.error(binary.left.position, "PINS error: invalid type - expected 'arr', got '" + rightExprType.get() + "'");
 
+            // right expression must be INT
             if (!rightExprType.get().isInt())
                 Report.error(binary.left.position, "PINS error: invalid type - expected 'int', got '" + rightExprType.get() + "'");
 
@@ -143,9 +144,11 @@ public class TypeChecker implements Visitor {
             arrType.ifPresent(array -> types.store(array.type, binary));
 
         } else if (binary.operator.equals(Binary.Operator.ASSIGN)) {
+            // left and right expression must be ATOM
             if (!leftExprType.get().isAtom() || !rightExprType.get().isAtom())
-                Report.error(binary.left.position, "PINS error: invalid type");
+                Report.error(binary.left.position, "PINS error: type must be ATOM");
 
+            // left and right expression must be the same type
             if (!leftExprType.get().equals(rightExprType.get()))
                 Report.error(binary.left.position, "PINS error: invalid type - expected '" + leftExprType.get() + "', got '" + rightExprType.get() + "'");
 
@@ -158,9 +161,10 @@ public class TypeChecker implements Visitor {
         for (Expr expr : block.expressions)
             expr.accept(this);
 
+        // last expression determines type of the block
         Expr lastExpr = block.expressions.get(block.expressions.size() - 1);
-        if (types.valueFor(lastExpr).isPresent())
-            types.store(types.valueFor(lastExpr).get(), block);
+        Optional<Type> lastExprType = types.valueFor(lastExpr);
+        lastExprType.ifPresent(type -> types.store(type, block));
     }
 
     @Override
@@ -241,6 +245,7 @@ public class TypeChecker implements Visitor {
         if (unaryExprType.isEmpty())
             return;
 
+        // if the unary operator is NOT, expression must be LOG
         if (unary.operator.equals(Unary.Operator.NOT)) {
             if (!unaryExprType.get().isLog())
                 Report.error(unary.position, "PINS error: invalid type - expected 'log', got '" + unaryExprType.get() + "'");
@@ -248,6 +253,7 @@ public class TypeChecker implements Visitor {
             types.store(unaryExprType.get(), unary);
         }
 
+        // if the unary operator is SUB or ADD, expression must be INT
         if ((unary.operator.equals(Unary.Operator.SUB) || (unary.operator.equals(Unary.Operator.ADD)))) {
             if (!unaryExprType.get().isInt())
                 Report.error(unary.position, "PINS error: invalid type - expected 'int', got '" + unaryExprType.get() + "'");
@@ -276,6 +282,7 @@ public class TypeChecker implements Visitor {
         where.defs.accept(this);
         where.expr.accept(this);
 
+        // type of expression determines type od WHERE block
         Optional<Type> exprType = types.valueFor(where.expr);
         exprType.ifPresent(type -> types.store(type, where));
     }
@@ -288,7 +295,8 @@ public class TypeChecker implements Visitor {
 
     @Override
     public void visit(FunDef funDef) {
-        for (Parameter parameter : funDef.parameters) // obdelamo paramtere
+        // parameter types
+        for (Parameter parameter : funDef.parameters)
             parameter.accept(this);
 
         Optional<Type> paramterType;
@@ -298,28 +306,30 @@ public class TypeChecker implements Visitor {
             paramterType.ifPresent(parameters::add);
         }
 
-        funDef.type.accept(this); // obdelamo return type
-
+        // function return type
+        funDef.type.accept(this);
         Optional<Type> returnType = types.valueFor(funDef.type);
-        returnType.ifPresent(type -> types.store(new Type.Function(parameters, type), funDef));     // povezemo tip in vozlisce
+        returnType.ifPresent(type -> types.store(new Type.Function(parameters, type), funDef));
 
-        funDef.body.accept(this);   // obdelamo telo funkcije
+        // function body
+        funDef.body.accept(this);
         Optional<Type> bodyType = types.valueFor(funDef.body);
 
-        if (returnType.isPresent() && bodyType.isPresent()) // preverimo da se funkcijski tip in tip vracanja ujemata
+        // we make sure that function body type and function return type match
+        if (returnType.isPresent() && bodyType.isPresent())
             if (!returnType.get().equals(bodyType.get()))
                 Report.error(funDef.body.position, "PINS error: function type and return type do not match - expected '" + returnType.get() + "', got '" + bodyType.get() + "'");
     }
 
     @Override
     public void visit(TypeDef typeDef) {
+        // cycle detection (if we come across visited type twice, then it's a cycle)
         if (visitedTypeDefs.get(typeDef) != null && visitedTypeDefs.get(typeDef))
             Report.error(typeDef.position, "PINS error: cycle detected between types");
 
         visitedTypeDefs.put(typeDef, true);
 
         typeDef.type.accept(this);
-
         Optional<Type> type = types.valueFor(typeDef.type);
         type.ifPresent(value -> types.store(value, typeDef));
 
@@ -353,9 +363,11 @@ public class TypeChecker implements Visitor {
         Optional<Type.Atom> arrAtom = arrType.get().asAtom();
         Optional<Type.Array> arrArr = arrType.get().asArray();
 
+        // ARR( ATOM ) - 1d array
         if (arrAtom.isPresent())
             types.store(new Type.Array(array.size, arrAtom.get()), array);
 
+            // ARR( ARR ) - nd array
         else if (arrArr.isPresent())
             types.store(new Type.Array(array.size, arrArr.get()), array);
     }
@@ -380,7 +392,7 @@ public class TypeChecker implements Visitor {
 
         definition.get().accept(this);
         Optional<Type> type = types.valueFor(definition.get());
-        type.ifPresent(value -> types.store(value, name));  // povezi s tipom
+        type.ifPresent(value -> types.store(value, name));
     }
 
     /*AUXILIARY METHODS*/
