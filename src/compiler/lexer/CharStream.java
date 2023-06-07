@@ -8,17 +8,18 @@ public class CharStream {
     private int prevColumn;
 
     public CharStream(String text) {
-        this.text = text;
+        this.text = text + '\0';
         this.idx = 0;
         this.line = 1;
         this.column = 1;
         this.prevColumn = 0;
     }
 
-    public char nextChar() {
-        if (this.idx >= this.text.length()) // EOF
-            return '\0';
+    public boolean hasNextChar() {
+        return idx < text.length();
+    }
 
+    public char nextChar() {
         char c = this.text.charAt(this.idx);
         this.idx++;
 

@@ -333,12 +333,14 @@ public class IRCodeGenerator implements Visitor {
         // Vmesna koda then
         IRNode then = getIRNode(ifThenElse.thenExpression);
 
+        // CJUMP(L1, L2) L1 STMT L2
         statements.add(cJumpStmtL1L2);
         statements.add(l1);
         statements.add((then instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) then);
         statements.add(l2);
 
         // Vmesna koda else
+        // CJUMP(L1, L2) L1 STMT JUMP(L3) L2 STMT L3
         if (ifThenElse.elseExpression.isPresent()) {
             IRNode else1 = getIRNode(ifThenElse.elseExpression.get());
 
