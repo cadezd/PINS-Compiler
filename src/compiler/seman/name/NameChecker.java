@@ -46,10 +46,11 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Call call) {
-        for (Expr arg : call.arguments)
-            navigate(arg);
+        // Checking definitions for arguments
+        for (Expr argument : call.arguments)
+            argument.accept(this);
 
-        // Standard library
+        // Handling standard library
         if (Constants.stdLibrary.containsKey(call.name))
             return;
 
@@ -64,6 +65,7 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Binary binary) {
+        // Checking if array is defined
         if (binary.operator.equals(Binary.Operator.ARR) && binary.left instanceof Name name) {
             Optional<Def> link = symbolTable.definitionFor(name.name);
 
@@ -75,33 +77,31 @@ public class NameChecker implements Visitor {
                 definitions.store(link.get(), name);
         }
 
-        // visiting left part of binary expression
-        navigate(binary.left);
-
-        // visiting right part of binary expression
-        navigate(binary.right);
+        // Visiting left and right part of binary expression
+        binary.left.accept(this);
+        binary.right.accept(this);
     }
 
     @Override
     public void visit(Block block) {
-        // visiting all expressions in block
+        // Visiting all expressions in block
         for (Expr expression : block.expressions)
-            navigate(expression);
+            expression.accept(this);
     }
 
     @Override
     public void visit(For forLoop) {
-        // visiting all parts of for loop
+        // Visiting all parts of for loop
         forLoop.counter.accept(this);
-        navigate(forLoop.low);
-        navigate(forLoop.high);
-        navigate(forLoop.step);
-        navigate(forLoop.body);
+        forLoop.low.accept(this);
+        forLoop.high.accept(this);
+        forLoop.step.accept(this);
+        forLoop.body.accept(this);
     }
 
     @Override
     public void visit(Name name) {
-        // linking variable name with its definition
+        // Linking variable name with its definition
         Optional<Def> link = symbolTable.definitionFor(name.name);
 
         if (link.isEmpty())
@@ -116,12 +116,12 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(IfThenElse ifThenElse) {
-        // visiting condition and the expression of if expression
-        navigate(ifThenElse.condition);
-        navigate(ifThenElse.thenExpression);
+        // Visiting condition and THEN expression
+        ifThenElse.condition.accept(this);
+        ifThenElse.thenExpression.accept(this);
 
-        // visiting else expression (if present)
-        ifThenElse.elseExpression.ifPresent(this::navigate);
+        // Visiting ELSE expression (if present)
+        ifThenElse.elseExpression.ifPresent(expr -> expr.accept(this));
     }
 
     @Override
@@ -131,83 +131,76 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Unary unary) {
-        // visiting expression
-        navigate(unary.expr);
+        // Visiting expression
+        unary.expr.accept(this);
     }
 
     @Override
     public void visit(While whileLoop) {
-        // visiting condition and body of while loop
-        navigate(whileLoop.condition);
-        navigate(whileLoop.body);
+        // Visiting condition and body of while loop
+        whileLoop.condition.accept(this);
+        whileLoop.body.accept(this);
     }
 
     @Override
     public void visit(Where where) {
-        symbolTable.pushScope(); // IN NEW SCOPE
-        where.defs.accept(this); // visiting definitions
-        navigate(where.expr); // visiting expression(s)
-        symbolTable.popScope(); // OUT OF SCOPE
+        // IN NEW SCOPE
+        symbolTable.inNewScope(() -> {
+            where.defs.accept(this); // Visiting definitions
+            where.expr.accept(this); // Visiting expression(s)
+        });
+        // OUT OF SCOPE
     }
 
     @Override
     public void visit(Defs defs) {
         // BFS (first we add all definitions in symbol table on current level)
         for (Def definition : defs.definitions) {
-            if (definition instanceof VarDef varDef) {
+            if (definition instanceof VarDef varDef)
                 addToSymbolTable(varDef, "PINS error: variable " + varDef.name + " is already defined");
-
-            } else if (definition instanceof TypeDef typeDef) {
+            else if (definition instanceof TypeDef typeDef)
                 addToSymbolTable(typeDef, "PINS error: type " + typeDef.name + " is already defined");
-
-            } else if (definition instanceof FunDef funDef) {
+            else if (definition instanceof FunDef funDef)
                 addToSymbolTable(funDef, "PINS error: function " + funDef.name + " is already defined");
-
-            } else {
+            else
                 Report.error(definition.position, "PINS error: unknown definition");
-
-            }
         }
 
         // DFS (second we link definitions of types, variables, functions with their usages on "sub-levels")
         for (Def definition : defs.definitions) {
-            if (definition instanceof VarDef varDef) {
+            if (definition instanceof VarDef varDef)
                 varDef.accept(this);
-
-            } else if (definition instanceof TypeDef typeDef) {
+            else if (definition instanceof TypeDef typeDef)
                 typeDef.accept(this);
+            else if (definition instanceof FunDef funDef) {
 
-            } else if (definition instanceof FunDef funDef) {
-
-                for (Parameter parameter : funDef.parameters)  // linking type of parameter with its definition
+                // Linking type of parameter with its definition
+                for (Parameter parameter : funDef.parameters)
                     parameter.accept(this);
 
-                if (funDef.type instanceof TypeName funType)  // linking return type with its definition
-                    funType.accept(this);
+                funDef.type.accept(this);
 
-                // visiting function body
-                symbolTable.pushScope();
-                funDef.accept(this);
-                symbolTable.popScope();
+                // Visiting function body
+                symbolTable.inNewScope(() -> {
+                    funDef.accept(this);
+                });
             }
         }
     }
 
     @Override
     public void visit(FunDef funDef) {
-        // adding definitions of parameters in symbol table
+        // Adding definitions of parameters in symbol table
         for (Parameter parameter : funDef.parameters)
             addToSymbolTable(parameter, "PINS error: parameter " + parameter.name + " is already defined");
 
-        funDef.type.accept(this);
-
-        // visiting function body
-        navigate(funDef.body);
+        // Visiting function body
+        funDef.body.accept(this);
     }
 
     @Override
     public void visit(TypeDef typeDef) {
-        // linking type of type with its definition
+        // Linking type of type with its definition
         if (typeDef.type instanceof TypeName typeType)
             typeType.accept(this);
         else if (typeDef.type instanceof Array typArr)
@@ -216,7 +209,7 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(VarDef varDef) {
-        // linking type of variable with its definitions
+        // Linking type of variable with its definitions
         if (varDef.type instanceof TypeName varType)
             varType.accept(this);
         else if (varDef.type instanceof Array varArr)
@@ -225,7 +218,7 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Parameter parameter) {
-        // linking type of parameter with its definition
+        // Linking type of parameter with its definition
         if (parameter.type instanceof TypeName parType)
             parType.accept(this);
         else if (parameter.type instanceof Array parArr)
@@ -234,9 +227,9 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(Array array) {
-        if (array.type instanceof Array arrArr)  // for multidimensional arrays
+        if (array.type instanceof Array arrArr)  // Multidimensional arrays
             arrArr.accept(this);
-        else if (array.type instanceof TypeName arrType)  // linking type of array with its definitions
+        else if (array.type instanceof TypeName arrType)  // Linking array type with its definitions
             arrType.accept(this);
     }
 
@@ -247,7 +240,7 @@ public class NameChecker implements Visitor {
 
     @Override
     public void visit(TypeName name) {
-        // linking variable name with its definition
+        // Linking type name with its definition
         Optional<Def> link = symbolTable.definitionFor(name.identifier);
 
         if (link.isEmpty())
@@ -259,33 +252,6 @@ public class NameChecker implements Visitor {
     }
 
     /*AUXILIARY METHODS*/
-
-    public void navigate(Expr expression) {
-        // navigating thru expressions
-        if (expression instanceof Call exprCall) {
-            exprCall.accept(this);
-        } else if (expression instanceof Binary exprBinary) {
-            exprBinary.accept(this);
-        } else if (expression instanceof Block exprBlock) {
-            exprBlock.accept(this);
-        } else if (expression instanceof For exprFor) {
-            exprFor.accept(this);
-        } else if (expression instanceof Name exprName) {
-            exprName.accept(this);
-        } else if (expression instanceof IfThenElse exprIfThenElse) {
-            exprIfThenElse.accept(this);
-        } else if (expression instanceof Literal exprLiteral) {
-            exprLiteral.accept(this);
-        } else if (expression instanceof Unary exprUnary) {
-            exprUnary.accept(this);
-        } else if (expression instanceof While exprWhile) {
-            exprWhile.accept(this);
-        } else if (expression instanceof Where exprWhere) {
-            exprWhere.accept(this);
-        } else {
-            Report.error(expression.position, "PINS error: something went wrong when executing name checker phase");
-        }
-    }
 
     private void addToSymbolTable(Def definition, String errorMessage) {
         try {
