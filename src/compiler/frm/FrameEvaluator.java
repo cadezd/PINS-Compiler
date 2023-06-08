@@ -67,7 +67,8 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(Call call) {
-        int size = 0; // velikost argumentov
+        // Getting size of arguments
+        int size = 0;
         Optional<Type> argumentType;
         for (Expr argument : call.arguments) {
             argumentType = types.valueFor(argument);
@@ -75,8 +76,10 @@ public class FrameEvaluator implements Visitor {
                 continue;
             size += argumentType.get().sizeInBytesAsParam();
         }
-        size += Constants.WordSize; // static link
+        // Adding size of a static link
+        size += Constants.WordSize;
 
+        // Adding space for arguments of a call to a frame
         Frame.Builder builder = builders.pop();
         builder.addFunctionCall(size);
         builders.push(builder);
@@ -84,6 +87,7 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(Binary binary) {
+        // Visiting all parts of binary expression
         binary.left.accept(this);
         binary.right.accept(this);
     }
@@ -91,6 +95,7 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(Block block) {
+        // Visiting expressions in a block
         for (Expr expression : block.expressions)
             expression.accept(this);
     }
@@ -98,6 +103,7 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(For forLoop) {
+        // Visiting all parts of for loop
         forLoop.counter.accept(this);
         forLoop.low.accept(this);
         forLoop.high.accept(this);
@@ -113,6 +119,7 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(IfThenElse ifThenElse) {
+        // Visiting all parts of if then else
         ifThenElse.condition.accept(this);
         ifThenElse.thenExpression.accept(this);
 
@@ -136,6 +143,7 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(While whileLoop) {
+        // Visiting all parts of while loop
         whileLoop.condition.accept(this);
         whileLoop.body.accept(this);
     }
@@ -143,6 +151,7 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(Where where) {
+        // Visiting all parts of where expression
         where.defs.accept(this);
         where.expr.accept(this);
     }
@@ -150,6 +159,7 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(Defs defs) {
+        // Visiting all definitions
         for (Def definition : defs.definitions)
             definition.accept(this);
     }
@@ -159,21 +169,23 @@ public class FrameEvaluator implements Visitor {
     public void visit(FunDef funDef) {
         staticLevel++;
 
-        // naredimo builderja in ga damo na sklad
+        // First we make a Builder for frame (named or anonymous)
         Frame.Builder builder;
         if (staticLevel <= 1)
             builder = new Frame.Builder(Frame.Label.named(funDef.name), staticLevel);
         else
             builder = new Frame.Builder(Frame.Label.nextAnonymous(), staticLevel);
 
-        builder.addParameter(Constants.WordSize); // static link
+        // Second we add space for static link
+        builder.addParameter(Constants.WordSize);
         builders.push(builder);
 
+        // Third we visit parameters and function body
         for (Parameter parameter : funDef.parameters)
             parameter.accept(this);
-
         funDef.body.accept(this);
 
+        // Last we build frame and store it
         frames.store(builder.build(), funDef);
         builders.pop();
 
@@ -192,8 +204,10 @@ public class FrameEvaluator implements Visitor {
         if (type.isEmpty())
             return;
 
+
         int size = type.get().sizeInBytes();
 
+        // Adding space in the heap for global variables
         if (staticLevel < 1) {
             String name = varDef.name;
             accesses.store(
@@ -203,6 +217,7 @@ public class FrameEvaluator implements Visitor {
             return;
         }
 
+        // Adding space in frames for local variables
         Frame.Builder builder = builders.pop();
         accesses.store(
                 new Access.Local(size, builder.addLocalVariable(size), staticLevel),
@@ -218,6 +233,7 @@ public class FrameEvaluator implements Visitor {
         if (type.isEmpty())
             return;
 
+        // Adding space in frame for parameters
         int size = type.get().sizeInBytesAsParam();
         Frame.Builder builder = builders.pop();
         accesses.store(
