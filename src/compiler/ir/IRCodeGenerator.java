@@ -84,18 +84,18 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Call call) {
-        // Standardna knjižnica
+        // Handling standard library
         if (Constants.stdLibrary.containsKey(call.name)) {
             handleStdLibrary(call);
             return;
         }
 
-        // Dobimo definicijo funkcije, ki jo kličemo
+        // Getting definition of called function
         Def funDef = getDef(call);
-        // Dobimo frame funkcije, ki jo kličemo
+        // Getting frame of called function
         Frame funFrame = getFrame(funDef);
 
-        // Grajenje drevesa pri ESEQ
+        // Building ESEQ subtree
         NameExpr stackPointer = NameExpr.SP();
         ConstantExpr offset = new ConstantExpr(currFrame.oldFPOffset());
         BinopExpr dstAddress = new BinopExpr(stackPointer, offset, BinopExpr.Operator.SUB);
@@ -105,7 +105,7 @@ public class IRCodeGenerator implements Visitor {
         MoveStmt returnValue = new MoveStmt(dstAddress1, framePointer);
 
 
-        // Dobimo static link
+        // Getting static link
         IRExpr staticLink;
         int diff = currFrame.staticLevel - funFrame.staticLevel;
         if (diff == -1)
@@ -116,7 +116,7 @@ public class IRCodeGenerator implements Visitor {
                 staticLink = new MemExpr(staticLink);
         }
 
-        // Dodamo argumente
+        // Adding arguments
         List<IRExpr> arguments = new ArrayList<>();
         if (funFrame.staticLevel == 1) arguments.add(new ConstantExpr(-1));
         else arguments.add(staticLink);
@@ -126,18 +126,19 @@ public class IRCodeGenerator implements Visitor {
         }
 
         CallExpr callExpr = new CallExpr(funFrame.label, arguments);
-        // Shranjevanje ESEQ stavka
+        // Saving ESEQ statement
         EseqExpr eseqExpr = new EseqExpr(returnValue, callExpr);
         imcCode.store(eseqExpr, call);
     }
 
     @Override
     public void visit(Binary binary) {
-        // Pridobimo obdelano levo in desno stran izraza
+        // Getting left and right expression of binary
         IRNode leftExpr = getIRNode(binary.left);
         IRNode rightExpr = getIRNode(binary.right);
 
         if (binary.operator == Binary.Operator.ASSIGN) {
+            // Generating ASSIGNMENT subtree
             MoveStmt moveStmt = new MoveStmt((IRExpr) leftExpr, (IRExpr) rightExpr);
             EseqExpr eseqExpr = new EseqExpr(moveStmt, (IRExpr) leftExpr);
             imcCode.store(eseqExpr, binary);
@@ -145,21 +146,24 @@ public class IRCodeGenerator implements Visitor {
         } else if (binary.operator == Binary.Operator.ARR) {
             Type arrType = getType(binary);
 
-            // index elementa  (idx * velikost tipa)
+            // index of the element  (index * size_of_type)
             BinopExpr index = new BinopExpr(
                     (IRExpr) rightExpr,
                     new ConstantExpr(arrType.sizeInBytes()),
                     BinopExpr.Operator.MUL
             );
 
-            // naslov elementa (arr_address + index_elementa)
+            // address of the element (array_address + index_of_the_element)
             BinopExpr arrayElementAddress = new BinopExpr(
                     (IRExpr) leftExpr,
                     index,
                     BinopExpr.Operator.ADD
             );
+
+            // value of the address of the element
             MemExpr arrayElementValue = new MemExpr(arrayElementAddress);
 
+            // if element type is array we store address else value at the address
             imcCode.store(
                     (arrType.isArray()) ?
                             arrayElementAddress :
@@ -168,6 +172,7 @@ public class IRCodeGenerator implements Visitor {
             );
 
         } else {
+            // Generating ARITHMETIC subtree
             BinopExpr.Operator operator = BinopExpr.Operator.valueOf(binary.operator.name());
             imcCode.store(
                     new BinopExpr((IRExpr) leftExpr, (IRExpr) rightExpr, operator),
@@ -178,7 +183,7 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Block block) {
-        // Iz n-1 stavkov naredimo blok, zadnji stavek je tip bloka
+        // Block consists of n-1 statements
         List<IRStmt> statements = new ArrayList<>();
         IRNode irNode;
         for (Expr expression : block.expressions) {
@@ -186,6 +191,7 @@ public class IRCodeGenerator implements Visitor {
             statements.add((irNode instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) irNode);
         }
 
+        // Last statement determines type of block
         IRNode lastIrNode = getIRNode(block.expressions.get(block.expressions.size() - 1));
         statements.remove(statements.size() - 1);
 
@@ -197,37 +203,37 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(For forLoop) {
-        // Ustvarimo labele
+        // Labels
         LabelStmt l1 = new LabelStmt(Label.nextAnonymous());
         LabelStmt l2 = new LabelStmt(Label.nextAnonymous());
         LabelStmt l3 = new LabelStmt(Label.nextAnonymous());
 
 
-        // Vmesna koda za counter (counter = low)
+        // IR code for counter (counter = low)
         IRNode counter = getIRNode(forLoop.counter);
         IRNode low = getIRNode(forLoop.low);
         MoveStmt moveCounter = new MoveStmt((IRExpr) counter, (IRExpr) low);
 
 
-        // Vmesna koda za pogoj (counter < high)
+        // IR code for condition (counter < high)
         IRNode high = getIRNode(forLoop.high);
         BinopExpr condition = new BinopExpr((IRExpr) counter, (IRExpr) high, BinopExpr.Operator.LT);
         CJumpStmt cJumpStmtL1L2 = new CJumpStmt(condition, l1.label, l2.label);
 
 
-        // Vmesna koda telesa for zanke
+        // IR code for body of a for loop
         IRNode body = getIRNode(forLoop.body);
 
 
-        // Vmesna koda za povečanje števca zanke (counter = counter + step)
+        // IR code for incrementing a counter (counter = counter + step)
         IRNode step = getIRNode(forLoop.step);
         BinopExpr incrementCounter = new BinopExpr((IRExpr) counter, (IRExpr) step, BinopExpr.Operator.ADD);
         MoveStmt updateCounter = new MoveStmt((IRExpr) counter, incrementCounter);
 
-        // Vmesna koda za skok na pogoj
+        // IR code for jump on a condition
         JumpStmt jumpStmtL3 = new JumpStmt(l3.label);
 
-        // Shranimo vmesno kodo (MOVE COUNTER, L3, CJUMP (L1,L2), L1, BODY, UPDATE COUNTER, JMP L3, L2)
+        // Saving IR code (MOVE COUNTER, L3, CJUMP (L1,L2), L1, BODY, UPDATE COUNTER, JMP L3, L2)
         List<IRStmt> statements = new ArrayList<>();
         statements.add(moveCounter);
         statements.add(l3);
@@ -243,19 +249,19 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Name name) {
-        // Dobimo definicijo spremenljivke
+        // Getting variable definition
         Def nameDef = getDef(name);
-        // Dobimo dostop do spremenljivke
+        // Getting variable access
         Access nameAccess = getAccess(nameDef);
-        // Dobimo tip spremenljivke
+        // Getting variable type
         Type nameType = getType(name);
 
-        // Hendlamo spremenljivko glede na dostop
+
         if (nameAccess instanceof Access.Global global) {
 
             NameExpr nameExpr = new NameExpr(global.label);
             imcCode.store(
-                    (nameType.isArray()) ? nameExpr : new MemExpr(nameExpr),
+                    (nameType.isArray()) ? nameExpr : new MemExpr(nameExpr), // address or value
                     name
             );
 
@@ -271,7 +277,7 @@ public class IRCodeGenerator implements Visitor {
                 imcCode.store(paramValue, name);
 
             } else {
-                // Dodajamo mem-e (od 1 naprej -> new MemExpr(nameExpr))
+                // Adding mem-s (from 1 onwards -> new MemExpr(nameExpr))
                 NameExpr framePointer = NameExpr.FP();
                 MemExpr memExpr = new MemExpr(framePointer);
                 for (int i = 1; i < diff; i++)
@@ -294,12 +300,12 @@ public class IRCodeGenerator implements Visitor {
                 MemExpr locValue = new MemExpr(locAddress);
 
                 imcCode.store(
-                        (nameType.isArray()) ? locAddress : locValue,
+                        (nameType.isArray()) ? locAddress : locValue, // address or value
                         name
                 );
 
             } else {
-                // Dodajamo mem-e (od 1 naprej -> new MemExpr(nameExpr))
+                // Adding mem-s (from 1 onwards -> new MemExpr(nameExpr))
                 NameExpr framePointer = NameExpr.FP();
                 MemExpr memExpr = new MemExpr(framePointer);
                 for (int i = 1; i < diff; i++)
@@ -310,7 +316,7 @@ public class IRCodeGenerator implements Visitor {
                 MemExpr locValue = new MemExpr(locAddress);
 
                 imcCode.store(
-                        (nameType.isArray()) ? locAddress : locValue,
+                        (nameType.isArray()) ? locAddress : locValue, // address or value
                         name
                 );
             }
@@ -322,31 +328,31 @@ public class IRCodeGenerator implements Visitor {
 
         List<IRStmt> statements = new ArrayList<>();
 
-        // Ustvarimo labele
+        // Labels
         LabelStmt l1 = new LabelStmt(Label.nextAnonymous());
         LabelStmt l2 = new LabelStmt(Label.nextAnonymous());
 
-        // Vmesna koda pogoja
+        // IR code for condition
         IRNode condition = getIRNode(ifThenElse.condition);
         CJumpStmt cJumpStmtL1L2 = new CJumpStmt((IRExpr) condition, l1.label, l2.label);
 
-        // Vmesna koda then
+        // IR code for THEN expression
         IRNode then = getIRNode(ifThenElse.thenExpression);
 
-        // CJUMP(L1, L2) L1 STMT L2
+        // Saving IR code CJUMP(L1, L2) L1 STMT L2
         statements.add(cJumpStmtL1L2);
         statements.add(l1);
         statements.add((then instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) then);
         statements.add(l2);
 
-        // Vmesna koda else
-        // CJUMP(L1, L2) L1 STMT JUMP(L3) L2 STMT L3
+        // IR code for ELSE expression
         if (ifThenElse.elseExpression.isPresent()) {
             IRNode else1 = getIRNode(ifThenElse.elseExpression.get());
 
             LabelStmt l3 = new LabelStmt(Label.nextAnonymous());
             JumpStmt jumL3 = new JumpStmt(l3.label);
 
+            // Saving IR code CJUMP(L1, L2) L1 STMT JUMP(L3) L2 STMT L3
             statements.add(3, jumL3);
             statements.add((else1 instanceof IRExpr expr) ? new ExpStmt(expr) : (IRStmt) else1);
             statements.add(l3);
@@ -357,7 +363,7 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Literal literal) {
-        // Globalno shranimo string z labelo
+        // Strings are global
         if (literal.type == Atom.Type.STR) {
             Label label = Label.nextAnonymous();
             accesses.store(new Access.Global(Constants.WordSize, label), literal);
@@ -367,7 +373,7 @@ public class IRCodeGenerator implements Visitor {
             return;
         }
 
-        // Shranimo vrednost
+        // Saving the value
         int value;
         if (literal.type == Atom.Type.LOG)
             value = (literal.value.equals("true")) ? 1 : 0;
@@ -381,12 +387,13 @@ public class IRCodeGenerator implements Visitor {
     public void visit(Unary unary) {
         IRNode expression = getIRNode(unary.expr);
 
-        if (unary.operator == Unary.Operator.ADD) // Če je predznak plus pustimo konstanto
+        // If the operator is + we don't change constant
+        if (unary.operator == Unary.Operator.ADD)
             imcCode.store(expression, unary);
-        else if (unary.operator == Unary.Operator.SUB) { // Če je predznak minus zapišemo kot (CONST(0) - CONST(value))
+        else if (unary.operator == Unary.Operator.SUB) { // If operator is - we change constant to (CONST(0) - CONST(value))
             BinopExpr negative = new BinopExpr(new ConstantExpr(0), (IRExpr) expression, BinopExpr.Operator.SUB);
             imcCode.store(negative, unary);
-        } else { // Če je predznak negacija zapišemo obrnemo vrednost iz 0 v 1 ali obratno (1 - input)
+        } else { // If the operator is !(NOT) we change value (1 - input)
             BinopExpr negated = new BinopExpr(new ConstantExpr(1), (IRExpr) expression, BinopExpr.Operator.SUB);
             imcCode.store(negated, unary);
         }
@@ -394,22 +401,22 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(While whileLoop) {
-        // Ustvarimo labele
+        // Labels
         LabelStmt l1 = new LabelStmt(Label.nextAnonymous());
         LabelStmt l2 = new LabelStmt(Label.nextAnonymous());
         LabelStmt l3 = new LabelStmt(Label.nextAnonymous());
 
-        // Vmesna koda za pogoj
+        // IR code for condition
         IRNode condition = getIRNode(whileLoop.condition);
         CJumpStmt cJumpStmtL1L2 = new CJumpStmt((IRExpr) condition, l1.label, l2.label);
 
-        // Vmesna koda telesa while stavka
+        // IR code for the body of while loop
         IRNode body = getIRNode(whileLoop.body);
 
-        // Vmesna koda za labelo, ki skoči na začetek zanke
+        // IR code for jump on the start of the loop
         JumpStmt jumpL3 = new JumpStmt(l3.label);
 
-        // Shranimo vmesno kodo za while zanko (L3, CJUMP (L1,L2), L1, BODY, JUMP L3, L2)
+        // Saving IR code (L3, CJUMP (L1,L2), L1, BODY, JUMP L3, L2)
         List<IRStmt> statements = new ArrayList<>();
         statements.add(l3);
         statements.add(cJumpStmtL1L2);
@@ -423,34 +430,34 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Where where) {
-        // Obdelamo definicije
+        // Visiting definitions
         where.defs.accept(this);
 
-        // Shranimo vmesno kodo za izraze iz where bloka
+        // Saving IR code for where expression
         IRNode expr = getIRNode(where.expr);
         imcCode.store(expr, where);
     }
 
     @Override
     public void visit(Defs defs) {
-        // Obdelamo definicije
+        // Visiting definitions
         for (Def definition : defs.definitions)
             definition.accept(this);
     }
 
     @Override
     public void visit(FunDef funDef) {
-        // Pridobimo frame funkcije
+        // Getting new function frame
         Frame funFrame = getFrame(funDef);
 
-        // Si zapomnimo trenutno funkcijo in jo obdelamo (lokalne sprem. v drugih funkcijah)
+        // Saving frame of current function
         Frame oldFrame = currFrame;
         currFrame = funFrame;
 
-        // Pridobimo vmesno kodo funkcije
+        // Getting IR code of a function
         IRNode funCode = getIRNode(funDef.body);
 
-        // naredimo še MOVE del in vmesno kodo shranimo
+        // IR code for saving the result of a function
         NameExpr framePointer = NameExpr.FP();
         MemExpr fpValue = new MemExpr(framePointer);
         MoveStmt moveStmt = new MoveStmt(fpValue, (IRExpr) funCode);
@@ -465,6 +472,7 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(VarDef varDef) {
+        // Adding global variables to heap
         Access varAccess = getAccess(varDef);
 
         if (varAccess instanceof Access.Global global)
