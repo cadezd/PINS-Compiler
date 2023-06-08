@@ -67,7 +67,7 @@ public class Interpreter {
     }
 
     private void internalInterpret(CodeChunk chunk, Map<Frame.Temp, Object> temps) {
-        // Nastavi FP in SP na nove vrednosti
+        // Setting FP and SP to new values
         int oldFP = framePointer;
         int odlSP = stackPointer;
         framePointer = stackPointer;
@@ -91,7 +91,7 @@ public class Interpreter {
             throw new RuntimeException("Linearize IR!");
         }
 
-        // Ponastavi FP in SP na stare vrednosti
+        // Setting FP and SP to old values
         framePointer = oldFP;
         stackPointer = odlSP;
     }
@@ -113,10 +113,10 @@ public class Interpreter {
     }
 
     private Object execute(CJumpStmt cjump, Map<Frame.Temp, Object> temps) {
-        boolean condition = toBool(execute(cjump.condition, temps));    // Vrednost pogoja
+        boolean condition = toBool(execute(cjump.condition, temps));    // Value of condition
         return (condition) ?
-                execute(new JumpStmt(cjump.thenLabel), temps) :         // Če je TRUE -> skoči na THEN
-                execute(new JumpStmt(cjump.elseLabel), temps);          // Če je FALSE -> skoči na ELSE
+                execute(new JumpStmt(cjump.thenLabel), temps) :         // If TRUE -> jump on THEN
+                execute(new JumpStmt(cjump.elseLabel), temps);          // If FALSE -> jump on ELSE
     }
 
     private Object execute(ExpStmt exp, Map<Frame.Temp, Object> temps) {
@@ -129,7 +129,7 @@ public class Interpreter {
 
     private Object execute(MoveStmt move, Map<Frame.Temp, Object> temps) {
         Object object = execute(move.src, temps);
-        Integer value = (object == null) ? 0 : toInt(object);    // Vredenost
+        Integer value = (object == null) ? 0 : toInt(object);    // Value
 
         if (move.dst instanceof TempExpr tempExpr) {
             temps.put(tempExpr.temp, value);
@@ -137,8 +137,8 @@ public class Interpreter {
         }
 
         int address = (move.dst instanceof MemExpr memExpr) ?
-                toInt(execute(memExpr.expr, temps)) :   // Če je MEM ga preskoči (da shrani naslov, ne pa vrednost)
-                toInt(execute(move.dst, temps));        // Če je naslov ga shrani
+                toInt(execute(memExpr.expr, temps)) :   // If MEM -> skip it (to get address)
+                toInt(execute(move.dst, temps));        // If address -> save value
 
         memory.stM(address, value);
         return memory.ldM(address);
@@ -226,15 +226,15 @@ public class Interpreter {
             random = new Random(seed);
             return null;
         } else if (memory.ldM(call.label) instanceof CodeChunk chunk) {
-            // Pripravimo argumente za naslednjo funkcijo (od SP navzgor)
+            // Prepraing arguments for next function (from SP upwards)
             int sp = stackPointer;
             for (IRExpr argument : call.args) {
                 memory.stM(sp, temps.get(((TempExpr) argument).temp));
                 sp += Constants.WordSize;
             }
 
-            internalInterpret(chunk, new HashMap<>());  // Izvedemo naslednjo funkcijo
-            return memory.ldM(stackPointer);            // Vrnemo rezultat izvedene funkcije
+            internalInterpret(chunk, new HashMap<>());  // Interpreting next function
+            return memory.ldM(stackPointer);            // Returning a result of interpreted function
         } else {
             throw new RuntimeException("Only functions can be called!");
         }
