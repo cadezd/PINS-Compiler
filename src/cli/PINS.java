@@ -25,13 +25,13 @@ public class PINS {
      * Faze prevajanja, ki izpišejo vmesne rezultate.
      */
     @ParsableOption(name = "--dump")
-    public PhasesEnumSet dumpPhases = PhasesEnumSet.empty();
+    public PhasesEnumSet dumpPhases = PhasesEnumSet.valueOf("INT");
 
     /**
      * Faza, ki se bo izvedla nazadnje.
      */
     @ParsableOption(name = "--exec")
-    public Phase execPhase = Phase.LEX;
+    public Phase execPhase = Phase.INT;
 
     @ParsableOption(name = "--memory")
     public int memory = 1024;
@@ -75,7 +75,7 @@ public class PINS {
 
         /**
          * Razčleni argument in kreira novo množico.
-         * 
+         *
          * @param arg Argument, ki ga metoda razčleni v množico faz.
          */
         public static PhasesEnumSet valueOf(String arg) {

@@ -1,0 +1,4 @@
+fun main(arg: integer) : integer = (
+    print_int(1234),
+    0
+)

@@ -12,6 +12,7 @@ import java.io.PrintStream;
 import java.util.List;
 import java.util.Optional;
 
+import common.Constants;
 import common.VoidOperator;
 import compiler.parser.ast.*;
 import compiler.parser.ast.def.*;
@@ -75,7 +76,8 @@ public class PrettyPrintVisitor2 implements Visitor {
     public void visit(Call call) {
         println("Call", call, call.name);
         inNewScope(() -> {
-            printDefinedAt(call);
+            if (!Constants.stdLibrary.containsKey(call.name))
+                printDefinedAt(call);
             call.arguments.forEach((arg) -> arg.accept(this));
         });
     }

@@ -12,6 +12,7 @@ import java.io.PrintStream;
 import java.util.List;
 import java.util.Optional;
 
+import common.Constants;
 import common.VoidOperator;
 import compiler.frm.Access;
 import compiler.frm.Frame;
@@ -41,12 +42,12 @@ public class PrettyPrintVisitor4 implements Visitor {
     private PrintStream stream;
 
     /**
-     * Razrešena imena. 
+     * Razrešena imena.
      */
     public Optional<NodeDescription<Def>> definitions = Optional.empty();
 
     /**
-     * Razrešeni podatkovni tipi. 
+     * Razrešeni podatkovni tipi.
      */
     public Optional<NodeDescription<Type>> types = Optional.empty();
 
@@ -62,9 +63,9 @@ public class PrettyPrintVisitor4 implements Visitor {
 
     /**
      * Ustvari novo instanco.
-     * 
+     *
      * @param increaseIndentBy za koliko naj se poveča indentacija pri gnezdenju.
-     * @param stream izhodni tok.
+     * @param stream           izhodni tok.
      */
     public PrettyPrintVisitor4(int increaseIndentBy, PrintStream stream) {
         requireNonNull(stream);
@@ -74,9 +75,9 @@ public class PrettyPrintVisitor4 implements Visitor {
 
     /**
      * Ustvari novo instanco.
-     * 
+     * <p>
      * Privzeta vrednost `increaseIndentBy` je 4.
-     * 
+     *
      * @param stream izhodni tok.
      */
     public PrettyPrintVisitor4(PrintStream stream) {
@@ -93,7 +94,8 @@ public class PrettyPrintVisitor4 implements Visitor {
     public void visit(Call call) {
         println("Call", call, call.name);
         inNewScope(() -> {
-            printDefinedAt(call);
+            if (!Constants.stdLibrary.containsKey(call.name))
+                printDefinedAt(call);
             printTypedAs(call);
             call.arguments.forEach((arg) -> arg.accept(this));
         });
@@ -275,12 +277,12 @@ public class PrettyPrintVisitor4 implements Visitor {
             node.accept(this);
         });
     }
-    
+
     // ----------------------------------
 
     /**
      * Znotraj gnezdenega bloka izvede operator `op`.
-     * 
+     * <p>
      * Gnezdenje bloka poveča trenutno indentacijo,
      * izvede operator `op`, nato pa indentacijo
      * nastavi na prejšnjo vrednost.
