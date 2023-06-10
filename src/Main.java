@@ -37,7 +37,7 @@ public class Main {
      * @param args parametri ukazne vrstice.
      */
     public static void main(String[] args) throws Exception {
-        var cli = PINS.parse(args);
+        var cli = PINS.parse(t);
         run(cli);
     }
 
