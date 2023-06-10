@@ -11,6 +11,7 @@ To install the PINS Compiler, please follow these steps:
 2. Unzip the downloaded package to extract the contents.
 3. Locate the extracted folder named `PINSCompiler`.
 4. Move the `PINSCompiler` folder into the `C:\Program Files\` folder.
+5. Add path location to `PINSCompiler` folder to enviroment variables.
 
 ### Note: It is important to place the "PINSCompiler" folder under the "Program Files" folder for the compiler to function correctly.
 Congratulations! You have successfully installed the PINS Compiler on your Windows system.
