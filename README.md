@@ -2,7 +2,7 @@
 "Compiler" or. rather an interpreter for PINS programming language
 
 ## Installation
-### Note: PINS Compiler is only compatible with Windows operating system.
+### Note: This installation process will only work on Windows operating system.
 Before installing the PINS Compiler, please ensure that you have the following prerequisites:
 - Java 19 or later installed on your system.
 
