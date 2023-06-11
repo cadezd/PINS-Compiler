@@ -18,6 +18,24 @@ Congratulations! You have successfully installed the PINS Compiler on your Windo
 
 ## Usage
 To compile your PINS code using the PINS Compiler, please follow these steps:
-
-
-
+1. Open a command prompt window.
+2. To compile your PINS code, run the following command:
+  ```
+  PINS <path_to_source_file> [flags]
+  ```
+  Replace `<path_to_source_file>` with the path to your PINS source file.
+  You can also include optional flags to customize the compilation process:
+  - `--dump`: Outputs the result of a specific phase of the compiler. Valid values for `<phase>` are `LEX` (lexical analysis), `SYN` (syntax analysis), `AST` (abstract syntax), `NAME` (name checker), `TYP` (type checker),     `FRM` (frames), `IMC` (intermediate code), and `INT` (interpreter). For example:
+    ```
+    PINS <path_to_source_file> --dump <phase>
+    ```
+  - `--exec`: Specifies the phase of the compiler that will be executed last. Valid values for <phase> are `LEX`, `SYN`, `AST`, `NAME`, `TYP`, `FRM`, `IMC`, and `INT`. For example:
+    ```
+    PINS <path_to_source_file> --exec <phase>
+    ```
+  - `--memory`: Sets the memory size for interpreter. For example:
+    ```
+    PINS <path_to_source_file> --memory <size>
+    ```
+    Replace `<size>` with the desired memory size in bytes.
+3. The compiler will process your PINS code and generate the corresponding output.
