@@ -3,10 +3,11 @@
 
 ## Usage
 To compile your PINS code using the PINS Compiler, please follow these steps:
-1. Open a command prompt window.
-2. To compile your PINS code, run the following command:
+1. Clone repository from GitHub.
+2. `cd` into `out\artifacts\PINSCompiler_jar` folder.
+3. To compile your PINS code, run the following command:
   ```
-  PINS <path_to_source_file> [flags]
+   java -jar .\PINSCompiler.jar PINS <path_to_source_file> [flags]
   ```
   Replace `<path_to_source_file>` with the path to your PINS source file.
   You can also include optional flags to customize the compilation process:
