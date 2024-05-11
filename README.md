@@ -1,6 +1,9 @@
 # PINS-Compiler
 "Compiler" or. rather an interpreter for PINS programming language
 
+## Requirements
+- `java 19` or later version.
+
 ## Usage
 To compile your PINS code using the PINS Compiler, please follow these steps:
 1. Clone repository from GitHub.
